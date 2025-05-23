@@ -105,186 +105,113 @@ kernel void MAIN_1_ParticleKernel(
     for (CurZone = 0; CurZone < ZoneCount; CurZone++)
     {
 #ifdef MLX // MLX Copy output from last loop
-		if (IsOnPML_I(i) == 1 || IsOnPML_J(j) == 1)
-		{
-			EL(V_x_x, i, j) = EL_OLD(V_x_x, i, j);
-			EL(V_y_x, i, j) = EL_OLD(V_y_x, i, j);
-			EL(V_x_y, i, j) = EL_OLD(V_x_y, i, j);
-			EL(V_y_y, i, j) = EL_OLD(V_y_y, i, j);
-			EL(Sigma_x_xx, i, j) = EL_OLD(Sigma_x_xx, i, j);
-			EL(Sigma_y_xx, i, j) = EL_OLD(Sigma_y_xx, i, j);
-			EL(Sigma_x_yy, i, j) = EL_OLD(Sigma_x_yy, i, j);
-			EL(Sigma_y_yy, i, j) = EL_OLD(Sigma_y_yy, i, j);
-			EL(Sigma_x_xy, i, j) = EL_OLD(Sigma_x_xy, i, j);
-			EL(Sigma_y_xy, i, j) = EL_OLD(Sigma_y_xy, i, j);
-
-			if (i == N1 - 1)
-			{
-				EL(V_x_x, i + 1, j) = EL_OLD(V_x_x, i + 1, j);
-				EL(V_y_x, i + 1, j) = EL_OLD(V_y_x, i + 1, j);
-				EL(Sigma_x_xy, i + 1, j) = EL_OLD(Sigma_x_xy, i + 1, j);
-				EL(Sigma_y_xy, i + 1, j) = EL_OLD(Sigma_y_xy, i + 1, j);
-			}
-			if (j == N2 - 1)
-			{
-				EL(V_x_y, i, j + 1) = EL_OLD(V_x_y, i, j + 1);
-				EL(V_y_y, i, j + 1) = EL_OLD(V_y_y, i, j + 1);
-				EL(Sigma_x_xy, i, j + 1) = EL_OLD(Sigma_x_xy, i, j + 1);
-				EL(Sigma_y_xy, i, j + 1) = EL_OLD(Sigma_y_xy, i, j + 1);
-			}
-			if (i == N1 - 1 && j == N2 - 1)
-			{
-				EL(V_x_y, i + 1, j + 1) = EL_OLD(V_x_y, i + 1, j + 1);
-				EL(V_y_y, i + 1, j + 1) = EL_OLD(V_y_y, i + 1, j + 1);
-				EL(Sigma_x_xy, i + 1, j + 1) = EL_OLD(Sigma_x_xy, i + 1, j + 1);
-				EL(Sigma_y_xy, i + 1, j + 1) = EL_OLD(Sigma_y_xy, i + 1, j + 1);
-			}
-		}
-
-		EL(Vx, i, j) = EL_OLD(Vx, i, j);
-		EL(Vy, i, j) = EL_OLD(Vy, i, j);
-		index_copy1 = Ind_Sigma_xy(i, j);
-		ELD(Rxy, index_copy1) = ELD_OLD(Rxy, index_copy1);
-		EL(Sigma_xy, i, j) = EL_OLD(Sigma_xy, i, j);
-		EL(Sigma_xx, i, j) = EL_OLD(Sigma_xx, i, j);
-		EL(Sigma_yy, i, j) = EL_OLD(Sigma_yy, i, j);
-		EL(Pressure, i, j) = EL_OLD(Pressure, i, j);
-
-		if (i == N1 - 1)
-		{
-			EL(Vx, i + 1, j) = EL_OLD(Vx, i + 1, j);
-			index_copy1 = Ind_Sigma_xy(i + 1, j);
-			ELD(Rxy, index_copy1) = ELD_OLD(Rxy, index_copy1);
-			EL(Sigma_xy, i + 1, j) = EL_OLD(Sigma_xy, i + 1, j);
-		}
-		if (j == N2 - 1)
-		{
-			EL(Vy, i, j + 1) = EL_OLD(Vy, i, j + 1);
-			index_copy1 = Ind_Sigma_xy(i, j + 1);
-			ELD(Rxy, index_copy1) = ELD_OLD(Rxy, index_copy1);
-			EL(Sigma_xy, i, j + 1) = EL_OLD(Sigma_xy, i, j + 1);
-		}
-		if (i == N1 - 1 && j == N2 - 1)
-		{
-			index_copy1 = Ind_Sigma_xy(i + 1, j + 1);
-			ELD(Rxy, index_copy1) = ELD_OLD(Rxy, index_copy1);
-			EL(Sigma_xy, i + 1, j + 1) = EL_OLD(Sigma_xy, i + 1, j + 1);
-		}
-
-		index_copy1 = Ind_Sigma_xx(i, j);
-		ELD(Rxx, index_copy1) = ELD_OLD(Rxx, index_copy1);
-		ELD(Ryy, index_copy1) = ELD_OLD(Ryy, index_copy1);
-
+		MLX_COPY;
 #endif
-        EL(Sigma_xy,i,j) += 1;
+        EL(Vx, i, j) += 1;
+    //     if (IsOnPML_I(i) == 1 || IsOnPML_J(j) == 1)
+    //     {
+    //         index = Ind_MaterialMap(i, j);
+    //         AvgInvRhoI = ELD(InvRhoMatH, ELD(MaterialMap, index));
+    //         // In the PML
+    //         //  For coeffs. for V_x
+    //         if (i < N1 - 1 && j < N2 - 1)
+    //         {
+    //             index = Ind_V_x_x(i, j);
+    //             Diff = i > 0 && i < N1 - 2 ? CA * (EL(Sigma_xx, i + 1, j) - EL(Sigma_xx, i, j)) -
+    //                                              CB * (EL(Sigma_xx, i + 2, j) - EL(Sigma_xx, i - 1, j))
+    //                    : i < N1 - 1 ? EL(Sigma_xx, i + 1, j) - EL(Sigma_xx, i, j)
+    //                                 : 0;
 
-        // if (IsOnPML_I(i) == 1 || IsOnPML_J(j) == 1)
-        // {
-        //     index = Ind_MaterialMap(i, j);
-        //     AvgInvRhoI = ELD(InvRhoMatH, ELD(MaterialMap, index));
-        //     // In the PML
-        //     //  For coeffs. for V_x
-        //     if (i < N1 - 1 && j < N2 - 1)
-        //     {
-        //         index = Ind_V_x_x(i, j);
+    //             ELD(V_x_x, index) = InvDXDThp_I * (ELD(V_x_x, index) * DXDThp_I +
+    //                                                AvgInvRhoI *
+    //                                                    Diff);
 
-        //         Diff = i > 0 && i < N1 - 2 ? CA * (EL(Sigma_xx, i + 1, j) - EL(Sigma_xx, i, j)) -
-        //                                          CB * (EL(Sigma_xx, i + 2, j) - EL(Sigma_xx, i - 1, j))
-        //                : i < N1 - 1 ? EL(Sigma_xx, i + 1, j) - EL(Sigma_xx, i, j)
-        //                             : 0;
+    //             index = Ind_V_y_x(i, j);
+    //             Diff = j > 1 && j < N2 - 1 ? CA * (EL(Sigma_xy, i, j) - EL(Sigma_xy, i, j - 1)) -
+    //                                              CB * (EL(Sigma_xy, i, j + 1) - EL(Sigma_xy, i, j - 2))
+    //                    : j > 0 && j < N2 ? EL(Sigma_xy, i, j) - EL(Sigma_xy, i, j - 1)
+    //                                      : 0;
 
-        //         ELD(V_x_x, index) = InvDXDThp_I * (ELD(V_x_x, index) * DXDThp_I +
-        //                                            AvgInvRhoI *
-        //                                                Diff);
+    //             ELD(V_y_x, index) = InvDXDT_J * (ELD(V_y_x, index) * DXDT_J +
+    //                                              AvgInvRhoI *
+    //                                                  Diff);
 
-        //         index = Ind_V_y_x(i, j);
-        //         Diff = j > 1 && j < N2 - 1 ? CA * (EL(Sigma_xy, i, j) - EL(Sigma_xy, i, j - 1)) -
-        //                                          CB * (EL(Sigma_xy, i, j + 1) - EL(Sigma_xy, i, j - 2))
-        //                : j > 0 && j < N2 ? EL(Sigma_xy, i, j) - EL(Sigma_xy, i, j - 1)
-        //                                  : 0;
+    //             index = Ind_V_x(i, j);
+    //             index2 = Ind_V_x_x(i, j);
+    //             ELD(Vx, index) = ELD(V_x_x, index2) + ELD(V_y_x, index2);
 
-        //         ELD(V_y_x, index) = InvDXDT_J * (ELD(V_y_x, index) * DXDT_J +
-        //                                          AvgInvRhoI *
-        //                                              Diff);
+    //             // For coeffs. for V_y
 
-        //         index = Ind_V_x(i, j);
-        //         index2 = Ind_V_x_x(i, j);
-        //         ELD(Vx, index) = ELD(V_x_x, index2) + ELD(V_y_x, index2);
+    //             index = Ind_V_x_y(i, j);
+    //             Diff = i > 1 && i < N1 - 1 ? CA * (EL(Sigma_xy, i, j) - EL(Sigma_xy, i - 1, j)) -
+    //                                              CB * (EL(Sigma_xy, i + 1, j) - EL(Sigma_xy, i - 2, j))
+    //                    : i > 0 && i < N1 ? EL(Sigma_xy, i, j) - EL(Sigma_xy, i - 1, j)
+    //                                      : 0;
 
-        //         // For coeffs. for V_y
+    //             ELD(V_x_y, index) = InvDXDT_I * (ELD(V_x_y, index) * DXDT_I +
+    //                                              AvgInvRhoI *
+    //                                                  Diff);
+    //             index = Ind_V_y_y(i, j);
+    //             Diff = j > 0 && j < N2 - 2 ? CA * (EL(Sigma_yy, i, j + 1) - EL(Sigma_yy, i, j)) -
+    //                                              CB * (EL(Sigma_yy, i, j + 2) - EL(Sigma_yy, i, j - 1))
+    //                    : j < N2 - 1 ? EL(Sigma_yy, i, j + 1) - EL(Sigma_yy, i, j)
+    //                                 : 0;
 
-        //         index = Ind_V_x_y(i, j);
+    //             ELD(V_y_y, index) = InvDXDThp_J * (ELD(V_y_y, index) * DXDThp_J +
+    //                                                AvgInvRhoI *
+    //                                                    Diff);
 
-        //         Diff = i > 1 && i < N1 - 1 ? CA * (EL(Sigma_xy, i, j) - EL(Sigma_xy, i - 1, j)) -
-        //                                          CB * (EL(Sigma_xy, i + 1, j) - EL(Sigma_xy, i - 2, j))
-        //                : i > 0 && i < N1 ? EL(Sigma_xy, i, j) - EL(Sigma_xy, i - 1, j)
-        //                                  : 0;
+    //             index = Ind_V_y(i, j);
+    //             index2 = Ind_V_y_y(i, j);
+    //             ELD(Vy, index) = ELD(V_x_y, index2) + ELD(V_y_y, index2);
+    //         }
+    //     }
+    //     else
+    //     {
+    //         index = Ind_MaterialMap(i, j);
+    //         AvgInvRhoI = 0.5 * (ELD(InvRhoMatH, EL(MaterialMap, i + 1, j)) + ELD(InvRhoMatH, ELD(MaterialMap, index)));
+    //         Dx = CA * (EL(Sigma_xx, i + 1, j) - EL(Sigma_xx, i, j)) -
+    //              CB * (EL(Sigma_xx, i + 2, j) - EL(Sigma_xx, i - 1, j));
 
-        //         ELD(V_x_y, index) = InvDXDT_I * (ELD(V_x_y, index) * DXDT_I +
-        //                                          AvgInvRhoI *
-        //                                              Diff);
-        //         index = Ind_V_y_y(i, j);
-        //         Diff = j > 0 && j < N2 - 2 ? CA * (EL(Sigma_yy, i, j + 1) - EL(Sigma_yy, i, j)) -
-        //                                          CB * (EL(Sigma_yy, i, j + 2) - EL(Sigma_yy, i, j - 1))
-        //                : j < N2 - 1 ? EL(Sigma_yy, i, j + 1) - EL(Sigma_yy, i, j)
-        //                             : 0;
+    //         Dx += CA * (EL(Sigma_xy, i, j) - EL(Sigma_xy, i, j - 1)) -
+    //               CB * (EL(Sigma_xy, i, j + 1) - EL(Sigma_xy, i, j - 2));
 
-        //         ELD(V_y_y, index) = InvDXDThp_J * (ELD(V_y_y, index) * DXDThp_J +
-        //                                            AvgInvRhoI *
-        //                                                Diff);
+    //         EL(Vx, i, j) += DT * AvgInvRhoI * Dx;
+    //         accum_x += EL(Vx, i, j);
+    //         //%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    //         AvgInvRhoJ = 0.5 * (ELD(InvRhoMatH, EL(MaterialMap, i, j + 1)) + ELD(InvRhoMatH, ELD(MaterialMap, index)));
+    //         Dy = CA * (EL(Sigma_yy, i, j + 1) - EL(Sigma_yy, i, j)) -
+    //              CB * (EL(Sigma_yy, i, j + 2) - EL(Sigma_yy, i, j - 1));
 
-        //         index = Ind_V_y(i, j);
-        //         index2 = Ind_V_y_y(i, j);
-        //         ELD(Vy, index) = ELD(V_x_y, index2) + ELD(V_y_y, index2);
-        //     }
-        // }
-        // else
-        // {
-        //     index = Ind_MaterialMap(i, j);
-        //     AvgInvRhoI = 0.5 * (ELD(InvRhoMatH, EL(MaterialMap, i + 1, j)) + ELD(InvRhoMatH, ELD(MaterialMap, index)));
+    //         Dy += CA * (EL(Sigma_xy, i, j) - EL(Sigma_xy, i - 1, j)) -
+    //               CB * (EL(Sigma_xy, i + 1, j) - EL(Sigma_xy, i - 2, j));
 
-        //     Dx = CA * (EL(Sigma_xx, i + 1, j) - EL(Sigma_xx, i, j)) -
-        //          CB * (EL(Sigma_xx, i + 2, j) - EL(Sigma_xx, i - 1, j));
-
-        //     Dx += CA * (EL(Sigma_xy, i, j) - EL(Sigma_xy, i, j - 1)) -
-        //           CB * (EL(Sigma_xy, i, j + 1) - EL(Sigma_xy, i, j - 2));
-
-        //     EL(Vx, i, j) += DT * AvgInvRhoI * Dx;
-        //     accum_x += EL(Vx, i, j);
-        //     //%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-        //     AvgInvRhoJ = 0.5 * (ELD(InvRhoMatH, EL(MaterialMap, i, j + 1)) + ELD(InvRhoMatH, ELD(MaterialMap, index)));
-
-        //     Dy = CA * (EL(Sigma_yy, i, j + 1) - EL(Sigma_yy, i, j)) -
-        //          CB * (EL(Sigma_yy, i, j + 2) - EL(Sigma_yy, i, j - 1));
-
-        //     Dy += CA * (EL(Sigma_xy, i, j) - EL(Sigma_xy, i - 1, j)) -
-        //           CB * (EL(Sigma_xy, i + 1, j) - EL(Sigma_xy, i - 2, j));
-
-        //     EL(Vy, i, j) += DT * AvgInvRhoJ * Dy;
-        //     accum_y += EL(Vy, i, j);
-        //     //%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-        // }
-        // if ((nStep < LengthSource) && TypeSource < 2) // Source is particle displacement
-        // {
-        //     index = IndN1N2(i, j, 0);
-        //     source = ELD(SourceMap, index);
-        //     if (source > 0)
-        //     {
-        //         source--; // need to use C index
-        //         value = ELD(SourceFunctions, nStep * NumberSources + source);
-        //         if (TypeSource == 0)
-        //         {
-        //             EL(Vx, i, j) += value * ELD(Ox, index);
-        //             EL(Vy, i, j) += value * ELD(Oy, index);
-        //         }
-        //         else
-        //         {
-        //             EL(Vx, i, j) = value * ELD(Ox, index);
-        //             EL(Vy, i, j) = value * ELD(Oy, index);
-        //         }
-        //     }
-        // }
-    }
+    //         EL(Vy, i, j) += DT * AvgInvRhoJ * Dy;
+    //         accum_y += EL(Vy, i, j);
+    //         //%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    //     }
+    //     if ((nStep < LengthSource) && TypeSource < 2) // Source is particle displacement
+    //     {
+    //         index = IndN1N2(i, j, 0);
+    //         source = ELD(SourceMap, index);
+    //         if (source > 0)
+    //         {
+    //             source--; // need to use C index
+    //             value = ELD(SourceFunctions, nStep * NumberSources + source);
+    //             if (TypeSource == 0)
+    //             {
+    //                 EL(Vx, i, j) += value * ELD(Ox, index);
+    //                 EL(Vy, i, j) += value * ELD(Oy, index);
+    //             }
+    //             else
+    //             {
+    //                 EL(Vx, i, j) = value * ELD(Ox, index);
+    //                 EL(Vy, i, j) = value * ELD(Oy, index);
+    //             }
+    //             // EL(Sigma_xy,i,j) += EL(Vy, i, j); // ADDED TEST: PRODUCES SLIGHTLY DIFFERENT RESULTS DUE TO ARITHMETIC PRECISION?
+    //         }
+    //     }
+    // }
     // if (IsOnPML_I(i) == 0 && IsOnPML_J(j) == 0 && nStep >= SensorStart * SensorSubSampling)
     // {
     //     if (ZoneCount > 1)
@@ -311,7 +238,7 @@ kernel void MAIN_1_ParticleKernel(
     //         if (IS_Vy_SELECTED(SelMapsRMSPeak))
     //             ELD(SqrAcc, index + index2 * IndexRMSPeak_Vy) = accum_y > ELD(SqrAcc, index + index2 * IndexRMSPeak_Vy) ? accum_y : ELD(SqrAcc, index + index2 * IndexRMSPeak_Vy);
     //     }
-    // }
+    }
 //----- MLX PARTICLE END -----//
 #ifndef MLX
 }

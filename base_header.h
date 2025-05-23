@@ -639,4 +639,82 @@ if IS_ ## _VarName ## _SELECTED(INHOST(SelMapsRMSPeak)) \
 {
 #endif
 #endif
+
+#ifdef MLX
+//----- MLX HEADER START -----//
+#define MLX_COPY 																\
+	/* Copy the data from the old buffer to the new one */ 						\					
+	/* This is needed for the MLX kernel compilation */ 						\						
+	if (IsOnPML_I(i) == 1 || IsOnPML_J(j) == 1)									\
+	{	                                                    					\
+		EL(V_x_x, i, j) = EL_OLD(V_x_x, i, j);			 						\
+		EL(V_y_x, i, j) = EL_OLD(V_y_x, i, j);              					\
+		EL(V_x_y, i, j) = EL_OLD(V_x_y, i, j);              					\
+		EL(V_y_y, i, j) = EL_OLD(V_y_y, i, j);              					\
+		EL(Sigma_x_xx, i, j) = EL_OLD(Sigma_x_xx, i, j);    					\
+		EL(Sigma_y_xx, i, j) = EL_OLD(Sigma_y_xx, i, j);    					\
+		EL(Sigma_x_yy, i, j) = EL_OLD(Sigma_x_yy, i, j);    					\
+		EL(Sigma_y_yy, i, j) = EL_OLD(Sigma_y_yy, i, j);    					\
+		EL(Sigma_x_xy, i, j) = EL_OLD(Sigma_x_xy, i, j);    					\
+		EL(Sigma_y_xy, i, j) = EL_OLD(Sigma_y_xy, i, j);    					\
+                                                            					\
+		if (i == N1 - 1)                                    					\
+		{                                                   					\
+			EL(V_x_x, i + 1, j) = EL_OLD(V_x_x, i + 1, j);  					\
+			EL(V_y_x, i + 1, j) = EL_OLD(V_y_x, i + 1, j);  					\
+			EL(Sigma_x_xy, i + 1, j) = EL_OLD(Sigma_x_xy, i + 1, j); 			\
+			EL(Sigma_y_xy, i + 1, j) = EL_OLD(Sigma_y_xy, i + 1, j); 			\
+		} 																		\
+		if (j == N2 - 1) 														\
+		{ 																		\
+			EL(V_x_y, i, j + 1) = EL_OLD(V_x_y, i, j + 1); 						\
+			EL(V_y_y, i, j + 1) = EL_OLD(V_y_y, i, j + 1); 						\
+			EL(Sigma_x_xy, i, j + 1) = EL_OLD(Sigma_x_xy, i, j + 1); 			\
+			EL(Sigma_y_xy, i, j + 1) = EL_OLD(Sigma_y_xy, i, j + 1); 			\
+		} 																		\
+		if (i == N1 - 1 && j == N2 - 1) 										\
+		{ 																		\
+			EL(V_x_y, i + 1, j + 1) = EL_OLD(V_x_y, i + 1, j + 1); 				\
+			EL(V_y_y, i + 1, j + 1) = EL_OLD(V_y_y, i + 1, j + 1); 				\
+			EL(Sigma_x_xy, i + 1, j + 1) = EL_OLD(Sigma_x_xy, i + 1, j + 1); 	\
+			EL(Sigma_y_xy, i + 1, j + 1) = EL_OLD(Sigma_y_xy, i + 1, j + 1); 	\
+		} 																		\
+	} 																			\
+      																			\
+	EL(Vx, i, j) = EL_OLD(Vx, i, j); 											\
+	EL(Vy, i, j) = EL_OLD(Vy, i, j); 											\
+	index_copy1 = Ind_Sigma_xy(i, j); 											\
+	ELD(Rxy, index_copy1) = ELD_OLD(Rxy, index_copy1); 							\
+	EL(Sigma_xy, i, j) = EL_OLD(Sigma_xy, i, j);								\
+	EL(Sigma_xx, i, j) = EL_OLD(Sigma_xx, i, j);								\
+	EL(Sigma_yy, i, j) = EL_OLD(Sigma_yy, i, j);								\
+	EL(Pressure, i, j) = EL_OLD(Pressure, i, j);								\
+                                                								\
+	if (i == N1 - 1)                            								\
+	{ 																			\
+		EL(Vx, i + 1, j) = EL_OLD(Vx, i + 1, j); 								\
+		index_copy1 = Ind_Sigma_xy(i + 1, j); 									\
+		ELD(Rxy, index_copy1) = ELD_OLD(Rxy, index_copy1); 						\
+		EL(Sigma_xy, i + 1, j) = EL_OLD(Sigma_xy, i + 1, j); 					\
+	} 																			\
+	if (j == N2 - 1) 															\
+	{ 																			\
+		EL(Vy, i, j + 1) = EL_OLD(Vy, i, j + 1); 								\
+		index_copy1 = Ind_Sigma_xy(i, j + 1); 									\
+		ELD(Rxy, index_copy1) = ELD_OLD(Rxy, index_copy1); 						\
+		EL(Sigma_xy, i, j + 1) = EL_OLD(Sigma_xy, i, j + 1); 					\
+	} 																			\
+	if (i == N1 - 1 && j == N2 - 1) 											\
+	{ 																			\
+		index_copy1 = Ind_Sigma_xy(i + 1, j + 1); 								\
+		ELD(Rxy, index_copy1) = ELD_OLD(Rxy, index_copy1); 						\
+		EL(Sigma_xy, i + 1, j + 1) = EL_OLD(Sigma_xy, i + 1, j + 1); 			\
+	} 																			\
+	  																			\
+	index_copy1 = Ind_Sigma_xx(i, j); 											\
+	ELD(Rxx, index_copy1) = ELD_OLD(Rxx, index_copy1); 							\
+	ELD(Ryy, index_copy1) = ELD_OLD(Ryy, index_copy1); 							\
+	threadgroup_barrier(metal::mem_flags::mem_threadgroup);
+//----- MLX HEADER END -----//
+#endif
 /// PMLS

@@ -1,5 +1,6 @@
 # Base
 from math import ceil
+import gc
 import os
 os.environ['METAL_DEVICE_WRAPPER_TYPE'] = '1'
 os.environ['METAL_DEBUG_ERROR_MODE'] = '0'
@@ -302,7 +303,7 @@ class VWE:
         print('before exec nref',nref)
         
         # Comment out line below to run full simulation
-        # TimeSteps = 10 
+        # TimeSteps = 3
         print(f'Number of time steps: {TimeSteps}')
         
         for nStep in range(TimeSteps):
@@ -327,22 +328,22 @@ class VWE:
             # print(f"Kernel Size: {np.prod(DimsKernel['MAIN_1'])}")
 
             if self.using_mlx:
-                mlx_inputs = [self.constant_buffer_uint,
-                              self.index_mex,
-                              self.index_uint,
-                              self.uint_buffer,
-                              self.mex_buffer[0],
-                              self.mex_buffer[1],
-                              self.mex_buffer[2],
-                              self.mex_buffer[3],
-                              self.mex_buffer[4],
-                              self.mex_buffer[5],
-                              self.mex_buffer[6],
-                              self.mex_buffer[7],
-                              self.mex_buffer[8],
-                              self.mex_buffer[9],
-                              self.mex_buffer[10],
-                              self.mex_buffer[11]]
+                # mlx_inputs = [self.constant_buffer_uint,
+                #               self.index_mex,
+                #               self.index_uint,
+                #               self.uint_buffer,
+                #               self.mex_buffer[0],
+                #               self.mex_buffer[1],
+                #               self.mex_buffer[2],
+                #               self.mex_buffer[3],
+                #               self.mex_buffer[4],
+                #               self.mex_buffer[5],
+                #               self.mex_buffer[6],
+                #               self.mex_buffer[7],
+                #               self.mex_buffer[8],
+                #               self.mex_buffer[9],
+                #               self.mex_buffer[10],
+                #               self.mex_buffer[11]]
                 
                 mlx_output_shapes = [self.mex_buffer[0].shape,
                                      self.mex_buffer[1].shape,
@@ -374,13 +375,29 @@ class VWE:
                     nSize=np.prod(DimsKernel[i])
                     
                     # Run stress kernel
-                    tmp_mex_buffer =self.AllStressKernels[i](inputs=mlx_inputs,
+                    tmp_mex_buffer =self.AllStressKernels[i](inputs=[self.constant_buffer_uint,
+                                                                     self.index_mex,
+                                                                     self.index_uint,
+                                                                     self.uint_buffer,
+                                                                     self.mex_buffer[0],
+                                                                     self.mex_buffer[1],
+                                                                     self.mex_buffer[2],
+                                                                     self.mex_buffer[3],
+                                                                     self.mex_buffer[4],
+                                                                     self.mex_buffer[5],
+                                                                     self.mex_buffer[6],
+                                                                     self.mex_buffer[7],
+                                                                     self.mex_buffer[8],
+                                                                     self.mex_buffer[9],
+                                                                     self.mex_buffer[10],
+                                                                     self.mex_buffer[11]],
                                                              output_shapes=mlx_output_shapes,
                                                              output_dtypes=mlx_output_dtypes,
                                                              grid=(nSize,1,1),
-                                                             threadgroup=(1024, 1, 1),
+                                                             threadgroup=(256, 1, 1),
                                                              verbose=verbose,
-                                                             init_value=init_value_tmp)
+                                                             init_value=init_value_tmp,
+                                                             stream=self.ctx)
                     
                     # Update mex_buffer except for 8 and 9 indices
                     self.mex_buffer[0] = tmp_mex_buffer[0]
@@ -410,45 +427,61 @@ class VWE:
                             self.mex_buffer[10],
                             self.mex_buffer[11])
                 
-                # for i in ["MAIN_1"]:
-                #     nSize=np.prod(DimsKernel[i])
+                for i in ["MAIN_1"]:
+                    nSize=np.prod(DimsKernel[i])
                     
-                #     # Run particle kernel
-                #     tmp_mex_buffer = self.AllParticleKernels[i](inputs=mlx_inputs,
-                #                                                 output_shapes=mlx_output_shapes,
-                #                                                 output_dtypes=mlx_output_dtypes,
-                #                                                 grid=(nSize,1,1),
-                #                                                 threadgroup=(1024, 1, 1),
-                #                                                 verbose=verbose,
-                #                                                 init_value=init_value_tmp)
+                    # Run particle kernel
+                    tmp_mex_buffer = self.AllParticleKernels[i](inputs=[self.constant_buffer_uint,
+                                                                        self.index_mex,
+                                                                        self.index_uint,
+                                                                        self.uint_buffer,
+                                                                        self.mex_buffer[0],
+                                                                        self.mex_buffer[1],
+                                                                        self.mex_buffer[2],
+                                                                        self.mex_buffer[3],
+                                                                        self.mex_buffer[4],
+                                                                        self.mex_buffer[5],
+                                                                        self.mex_buffer[6],
+                                                                        self.mex_buffer[7],
+                                                                        self.mex_buffer[8],
+                                                                        self.mex_buffer[9],
+                                                                        self.mex_buffer[10],
+                                                                        self.mex_buffer[11]],
+                                                                output_shapes=mlx_output_shapes,
+                                                                output_dtypes=mlx_output_dtypes,
+                                                                grid=(nSize,1,1),
+                                                                threadgroup=(256, 1, 1),
+                                                                verbose=verbose,
+                                                                init_value=init_value_tmp,
+                                                                stream=self.ctx)
                 
-                #     # Update mex_buffer except for 8 and 9 indices
-                #     self.mex_buffer[0] = tmp_mex_buffer[0]
-                #     self.mex_buffer[1] = tmp_mex_buffer[1]
-                #     self.mex_buffer[2] = tmp_mex_buffer[2]
-                #     self.mex_buffer[3] = tmp_mex_buffer[3]
-                #     self.mex_buffer[4] = tmp_mex_buffer[4]
-                #     self.mex_buffer[5] = tmp_mex_buffer[5]
-                #     self.mex_buffer[6] = tmp_mex_buffer[6]
-                #     self.mex_buffer[7] = tmp_mex_buffer[7]
-                #     # self.mex_buffer[8] = tmp_mex_buffer[8]
-                #     # self.mex_buffer[9] = tmp_mex_buffer[9]
-                #     self.mex_buffer[10] = tmp_mex_buffer[10]
-                #     self.mex_buffer[11] = tmp_mex_buffer[11]
+                    # Update mex_buffer except for 8 and 9 indices
+                    self.mex_buffer[0] = tmp_mex_buffer[0]
+                    self.mex_buffer[1] = tmp_mex_buffer[1]
+                    self.mex_buffer[2] = tmp_mex_buffer[2]
+                    self.mex_buffer[3] = tmp_mex_buffer[3]
+                    self.mex_buffer[4] = tmp_mex_buffer[4]
+                    self.mex_buffer[5] = tmp_mex_buffer[5]
+                    self.mex_buffer[6] = tmp_mex_buffer[6]
+                    self.mex_buffer[7] = tmp_mex_buffer[7]
+                    # self.mex_buffer[8] = tmp_mex_buffer[8]
+                    # self.mex_buffer[9] = tmp_mex_buffer[9]
+                    self.mex_buffer[10] = tmp_mex_buffer[10]
+                    self.mex_buffer[11] = tmp_mex_buffer[11]
                     
-                #     # Evaluate to prevent compute graph from getting too large
-                #     mx.eval(self.mex_buffer[0],
-                #             self.mex_buffer[1],
-                #             self.mex_buffer[2],
-                #             self.mex_buffer[3],
-                #             self.mex_buffer[4],
-                #             self.mex_buffer[5],
-                #             self.mex_buffer[6],
-                #             self.mex_buffer[7],
-                #             self.mex_buffer[8],
-                #             self.mex_buffer[9],
-                #             self.mex_buffer[10],
-                #             self.mex_buffer[11])
+                    # Evaluate to prevent compute graph from getting too large
+                    mx.eval(self.mex_buffer[0],
+                            self.mex_buffer[1],
+                            self.mex_buffer[2],
+                            self.mex_buffer[3],
+                            self.mex_buffer[4],
+                            self.mex_buffer[5],
+                            self.mex_buffer[6],
+                            self.mex_buffer[7],
+                            self.mex_buffer[8],
+                            self.mex_buffer[9],
+                            self.mex_buffer[10],
+                            self.mex_buffer[11])
 
                 # if (nStep % arguments['SensorSubSampling'])==0  and (int(nStep/arguments['SensorSubSampling'])>=arguments['SensorStart']):
                 #     # Run sensors kernel
@@ -456,7 +489,7 @@ class VWE:
                 #                                         output_shapes=mlx_output_shapes,
                 #                                         output_dtypes=mlx_output_dtypes,
                 #                                         grid=(np.prod(self.globalSensor),1,1),
-                #                                         threadgroup=(1024, 1, 1),
+                #                                         threadgroup=(256, 1, 1),
                 #                                         verbose=False)
                 
                 #     # Update mex_buffer except for 8 and 9 indices
@@ -514,26 +547,26 @@ class VWE:
                                                 self.mex_buffer[11])
                     AllHandles.append(handle)
 
-                # for i in ["MAIN_1"]:
-                #     nSize=np.prod(DimsKernel[i])
-                #     handle = self.AllParticleKernels[i](nSize,self.constant_buffer_uint,
-                #                                 self.index_mex,
-                #                                 self.index_uint, 
-                #                                 self.uint_buffer,
-                #                                 self.mex_buffer[0],
-                #                                 self.mex_buffer[1],
-                #                                 self.mex_buffer[2],
-                #                                 self.mex_buffer[3],
-                #                                 self.mex_buffer[4],
-                #                                 self.mex_buffer[5],
-                #                                 self.mex_buffer[6],
-                #                                 self.mex_buffer[7],
-                #                                 self.mex_buffer[8],
-                #                                 self.mex_buffer[9],
-                #                                 self.mex_buffer[10],
-                #                                 self.mex_buffer[11])
+                for i in ["MAIN_1"]:
+                    nSize=np.prod(DimsKernel[i])
+                    handle = self.AllParticleKernels[i](nSize,self.constant_buffer_uint,
+                                                self.index_mex,
+                                                self.index_uint, 
+                                                self.uint_buffer,
+                                                self.mex_buffer[0],
+                                                self.mex_buffer[1],
+                                                self.mex_buffer[2],
+                                                self.mex_buffer[3],
+                                                self.mex_buffer[4],
+                                                self.mex_buffer[5],
+                                                self.mex_buffer[6],
+                                                self.mex_buffer[7],
+                                                self.mex_buffer[8],
+                                                self.mex_buffer[9],
+                                                self.mex_buffer[10],
+                                                self.mex_buffer[11])
 
-                #     AllHandles.append(handle)
+                    AllHandles.append(handle)
                 # if (nStep % arguments['SensorSubSampling'])==0  and (int(nStep/arguments['SensorSubSampling'])>=arguments['SensorStart']):
                 #     handle=self.SensorsKernel(np.prod(self.globalSensor),
                 #                     self.constant_buffer_uint,
@@ -1025,7 +1058,7 @@ class VWE:
             print("MAIN_1_global_" + Type, "=", str(self.FUNCTION_GLOBALS['MAIN_1'][Type]))
             
 def main():
-    # PARAMETERS
+    #%% PARAMETERS
     # Device Specific
     gpu_device = 'M1'               # GPU device name
 
@@ -1045,7 +1078,7 @@ def main():
 
 
 
-    # SIMULATION DOMAIN SETUP
+    #%% SIMULATION DOMAIN SETUP
     # Domain Properties
     shortest_wavelength = medium_SOS/us_frequency
     spatial_step = shortest_wavelength/ points_per_wavelength
@@ -1077,7 +1110,7 @@ def main():
     
     
     
-    # GENERATE SOURCE MAP + SOURCE TIME SIGNAL
+    #%% GENERATE SOURCE MAP + SOURCE TIME SIGNAL
     # Generate line source
     def MakeLineSource(DimX,SpatialStep,Diameter):
         # simple defintion of a circular source centred in the domain
@@ -1117,7 +1150,7 @@ def main():
     
     
     
-    # GENERATE SENSOR MAP
+    #%% GENERATE SENSOR MAP
     # Define sensor map
     sensor_map=np.zeros((N1,N2),np.uint32)
     sensor_map[pml_thickness:-pml_thickness,pml_thickness:-pml_thickness]=1
@@ -1129,7 +1162,7 @@ def main():
     
     
     
-    # VISCOELASTICE WAVE EQUATION KERNEL CODES
+    #%% VISCOELASTICE WAVE EQUATION KERNEL CODES
     global base_header,stress_kernel,particle_kernel,sensors_kernel
     with open('base_header.h','r') as f:
         base_header = f.read()
@@ -1144,7 +1177,7 @@ def main():
         sensors_kernel = f.read()
         
         
-    # VISCOELEASTIC WAVE EQUATION PRE KERNEL CALCULATIONS  
+    #%% VISCOELEASTIC WAVE EQUATION PRE KERNEL CALCULATIONS  
     vwe_mc = VWE()
     vwe_mlx = VWE()
 
@@ -1176,7 +1209,7 @@ def main():
     
     
     
-    # RUN VWE CALCULATION VIA MLX
+    #%% RUN VWE CALCULATION VIA MLX
     # Kernel setup
     output_dict_mlx = vwe_mlx.kernel_setup(arguments=input_params_mlx,using_mlx=True)
     
@@ -1188,7 +1221,7 @@ def main():
     
     
     
-    # RUN VWE CALCULATION VIA METALCOMPUTE
+    #%% RUN VWE CALCULATION VIA METALCOMPUTE
     # Kernel setup
     output_dict_mc = vwe_mc.kernel_setup(arguments=input_params_mc,using_mlx=False)
 
@@ -1200,10 +1233,18 @@ def main():
     
     
     
-    # PLOT DATA
+    #%% PLOT DATA
     # Save to new name
     results_map_mc = last_map_results_mc['Sigma_xy'].T
     results_map_mlx = last_map_results_mlx['Sigma_xy'].T
+    # results_map_mc = last_map_results_mc['Vx'].T
+    # results_map_mlx = last_map_results_mlx['Vx'].T
+    # results_map_mc = last_map_results_mc['Vy'].T
+    # results_map_mlx = last_map_results_mlx['Vy'].T
+    # results_map_mc = last_map_results_mc['Pressure'].T
+    # results_map_mlx = last_map_results_mlx['Pressure'].T
+    # results_map_mc = rms_results_mc['Pressure'].T
+    # results_map_mlx = rms_results_mc['Pressure'].T
     if gpu_device =='M3': #we save the results for a latter comparison to M1-based results
         np.savez_compressed('results_map_mlx_M3',results_map_mlx_M3=results_map_mlx)
     # results_map_mlx = results_map_mc
@@ -1241,7 +1282,7 @@ def main():
     
     
     
-    # COMPARE DATA - MLX VS PYMETAL COMPUTE
+    #%% COMPARE DATA - MLX VS PYMETAL COMPUTE
     tolerance = 1e-6
     data_match = np.all(results_map_mc == results_map_mlx)
     print("Data matches?", data_match)
@@ -1280,41 +1321,41 @@ def main():
         
     
     
-    # COMPARE DATA - MLX IN M1 VS MLX IN M3 MAX 
-    tolerance = 1e-6
-    results_map_mlx_m3 =np.load('results_map_mlx_M3.npz')['results_map_mlx_M3']
-    data_match = np.all(results_map_mlx == results_map_mlx_m3)
-    print("Data matches?", data_match)
+    #%% COMPARE DATA - MLX IN M1 VS MLX IN M3 MAX 
+    # tolerance = 1e-6
+    # results_map_mlx_m3 =np.load('results_map_mlx_M3.npz')['results_map_mlx_M3']
+    # data_match = np.all(results_map_mlx == results_map_mlx_m3)
+    # print("Data matches?", data_match)
 
-    if not data_match:
-        # DICE coefficient calculation
-        matches = abs(results_map_mlx - results_map_mlx_m3) < tolerance
-        matches_count = len(matches[matches==True])
-        dice_coeff = 2 * matches_count / (results_map_mlx_m3.size + results_map_mlx.size)
-        print(f"Dice Coefficient: {dice_coeff}")
+    # if not data_match:
+    #     # DICE coefficient calculation
+    #     matches = abs(results_map_mlx - results_map_mlx_m3) < tolerance
+    #     matches_count = len(matches[matches==True])
+    #     dice_coeff = 2 * matches_count / (results_map_mlx_m3.size + results_map_mlx.size)
+    #     print(f"Dice Coefficient: {dice_coeff}")
 
-        # Plot difference images
-        diffs = abs(results_map_mlx.T - results_map_mlx_m3.T)
+    #     # Plot difference images
+    #     diffs = abs(results_map_mlx.T - results_map_mlx_m3.T)
 
-        fig, axs = plt.subplots(1, 1, figsize=(4, 5))
-        axs.set_title('MLX M1 vs MLX M3 Max\nDifferences')
-        diff_im1 = axs.imshow(diffs.T)
-        plt.colorbar(diff_im1, ax=axs)
-        plt.tight_layout()
+    #     fig, axs = plt.subplots(1, 1, figsize=(4, 5))
+    #     axs.set_title('MLX M1 vs MLX M3 Max\nDifferences')
+    #     diff_im1 = axs.imshow(diffs.T)
+    #     plt.colorbar(diff_im1, ax=axs)
+    #     plt.tight_layout()
 
-        # Get difference histograms
-        hist,bins = np.histogram(diffs)
-        print(f"Difference Histogram")
-        for bin in range(len(bins)-1):
-            print(f"{bins[bin]:.2f} to {bins[bin+1]:.2f}: {hist[bin]}")
+    #     # Get difference histograms
+    #     hist,bins = np.histogram(diffs)
+    #     print(f"Difference Histogram")
+    #     for bin in range(len(bins)-1):
+    #         print(f"{bins[bin]:.2f} to {bins[bin+1]:.2f}: {hist[bin]}")
 
-        # Mean square error calculation
-        mse = mean_squared_error(results_map_mlx_m3,results_map_mlx)
-        print(f"Mean square error: {mse}")
+    #     # Mean square error calculation
+    #     mse = mean_squared_error(results_map_mlx_m3,results_map_mlx)
+    #     print(f"Mean square error: {mse}")
 
-        # Normalized root mean square error calculation
-        nrmse = normalized_root_mse(results_map_mlx,results_map_mlx,normalization='min-max')
-        print(f"Normalized root mean square error: {nrmse}")
+    #     # Normalized root mean square error calculation
+    #     nrmse = normalized_root_mse(results_map_mlx,results_map_mlx,normalization='min-max')
+    #     print(f"Normalized root mean square error: {nrmse}")
     
     # Show plots
     plt.show()
