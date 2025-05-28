@@ -642,15 +642,52 @@ if IS_ ## _VarName ## _SELECTED(INHOST(SelMapsRMSPeak)) \
 
 #ifdef MLX
 //----- MLX HEADER START -----//
-#define MLX_COPY 																\
+
+#define MLX_SQRACC_COPY																														    	\
+	CurZone = 0;																																	\
+	index_copy1 = IndN1N2(i, j, 0);																													\
+	index_copy2 = N1 * N2;																															\
+		                                                                                                                                            \
+	if ((SelRMSorPeak & SEL_RMS)) /* RMS was selected, and it is always at the location 0 of dim 5 */                                               \
+	{																																				\
+		if (IS_Sigmaxx_SELECTED(SelMapsRMSPeak))	                                                                                                \
+			ELD(SqrAcc, index_copy1 + index_copy2 * IndexRMSPeak_Sigmaxx) = ELD_OLD(SqrAcc, index_copy1 + index_copy2 * IndexRMSPeak_Sigmaxx);      \
+		if (IS_Sigmayy_SELECTED(SelMapsRMSPeak))									                                                                \
+			ELD(SqrAcc, index_copy1 + index_copy2 * IndexRMSPeak_Sigmayy) = ELD_OLD(SqrAcc, index_copy1 + index_copy2 * IndexRMSPeak_Sigmayy);		\
+																																					\
+		if (IS_Pressure_SELECTED(SelMapsRMSPeak))																									\
+			ELD(SqrAcc, index_copy1 + index_copy2 * IndexRMSPeak_Pressure) = ELD_OLD(SqrAcc, index_copy1 + index_copy2 * IndexRMSPeak_Pressure);	\
+		if (IS_Sigmaxy_SELECTED(SelMapsRMSPeak))																									\
+			ELD(SqrAcc, index_copy1 + index_copy2 * IndexRMSPeak_Sigmaxy) = ELD_OLD(SqrAcc, index_copy1 + index_copy2 * IndexRMSPeak_Sigmaxy);		\
+		if (IS_Vx_SELECTED(SelMapsRMSPeak))																											\
+			ELD(SqrAcc, index_copy1 + index_copy2 * IndexRMSPeak_Vx) = ELD_OLD(SqrAcc, index_copy1 + index_copy2 * IndexRMSPeak_Vx);				\
+		if (IS_Vy_SELECTED(SelMapsRMSPeak))																											\
+			ELD(SqrAcc, index_copy1 + index_copy2 * IndexRMSPeak_Vy) = ELD_OLD(SqrAcc, index_copy1 + index_copy2 * IndexRMSPeak_Vy);				\
+	}																																				\
+	if ((SelRMSorPeak & SEL_RMS) && (SelRMSorPeak & SEL_PEAK)) /* If both PEAK and RMS were selected we save in the far part of the array */		\
+		index_copy1 += index_copy2 * NumberSelRMSPeakMaps;																							\
+	if (SelRMSorPeak & SEL_PEAK)																													\
+	{																																				\
+		if (IS_Sigmaxx_SELECTED(SelMapsRMSPeak))																									\
+			ELD(SqrAcc, index_copy1 + index_copy2 * IndexRMSPeak_Sigmaxx) = ELD_OLD(SqrAcc, index_copy1 + index_copy2 * IndexRMSPeak_Sigmaxx);		\
+		if (IS_Sigmayy_SELECTED(SelMapsRMSPeak))																									\
+			ELD(SqrAcc, index_copy1 + index_copy2 * IndexRMSPeak_Sigmayy) = ELD_OLD(SqrAcc, index_copy1 + index_copy2 * IndexRMSPeak_Sigmayy);		\
+		if (IS_Pressure_SELECTED(SelMapsRMSPeak))																									\
+			ELD(SqrAcc, index_copy1 + index_copy2 * IndexRMSPeak_Pressure) = ELD_OLD(SqrAcc, index_copy1 + index_copy2 * IndexRMSPeak_Pressure);	\
+		if (IS_Sigmaxy_SELECTED(SelMapsRMSPeak))																									\
+			ELD(SqrAcc, index_copy1 + index_copy2 * IndexRMSPeak_Sigmaxy) = ELD_OLD(SqrAcc, index_copy1 + index_copy2 * IndexRMSPeak_Sigmaxy);		\
+		if (IS_Vx_SELECTED(SelMapsRMSPeak))																											\
+			ELD(SqrAcc, index_copy1 + index_copy2 * IndexRMSPeak_Vx) = ELD_OLD(SqrAcc, index_copy1 + index_copy2 * IndexRMSPeak_Vx);				\
+		if (IS_Vy_SELECTED(SelMapsRMSPeak))																											\
+			ELD(SqrAcc, index_copy1 + index_copy2 * IndexRMSPeak_Vy) = ELD_OLD(SqrAcc, index_copy1 + index_copy2 * IndexRMSPeak_Vy);				\
+	}																																				\
+	// threadgroup_barrier(metal::mem_flags::mem_threadgroup);
+
+#define MLX_STRESS_COPY 													    \
 	/* Copy the data from the old buffer to the new one */ 						\					
 	/* This is needed for the MLX kernel compilation */ 						\						
 	if (IsOnPML_I(i) == 1 || IsOnPML_J(j) == 1)									\
 	{	                                                    					\
-		EL(V_x_x, i, j) = EL_OLD(V_x_x, i, j);			 						\
-		EL(V_y_x, i, j) = EL_OLD(V_y_x, i, j);              					\
-		EL(V_x_y, i, j) = EL_OLD(V_x_y, i, j);              					\
-		EL(V_y_y, i, j) = EL_OLD(V_y_y, i, j);              					\
 		EL(Sigma_x_xx, i, j) = EL_OLD(Sigma_x_xx, i, j);    					\
 		EL(Sigma_y_xx, i, j) = EL_OLD(Sigma_y_xx, i, j);    					\
 		EL(Sigma_x_yy, i, j) = EL_OLD(Sigma_x_yy, i, j);    					\
@@ -660,29 +697,21 @@ if IS_ ## _VarName ## _SELECTED(INHOST(SelMapsRMSPeak)) \
                                                             					\
 		if (i == N1 - 1)                                    					\
 		{                                                   					\
-			EL(V_x_x, i + 1, j) = EL_OLD(V_x_x, i + 1, j);  					\
-			EL(V_y_x, i + 1, j) = EL_OLD(V_y_x, i + 1, j);  					\
 			EL(Sigma_x_xy, i + 1, j) = EL_OLD(Sigma_x_xy, i + 1, j); 			\
 			EL(Sigma_y_xy, i + 1, j) = EL_OLD(Sigma_y_xy, i + 1, j); 			\
 		} 																		\
 		if (j == N2 - 1) 														\
 		{ 																		\
-			EL(V_x_y, i, j + 1) = EL_OLD(V_x_y, i, j + 1); 						\
-			EL(V_y_y, i, j + 1) = EL_OLD(V_y_y, i, j + 1); 						\
 			EL(Sigma_x_xy, i, j + 1) = EL_OLD(Sigma_x_xy, i, j + 1); 			\
 			EL(Sigma_y_xy, i, j + 1) = EL_OLD(Sigma_y_xy, i, j + 1); 			\
 		} 																		\
 		if (i == N1 - 1 && j == N2 - 1) 										\
 		{ 																		\
-			EL(V_x_y, i + 1, j + 1) = EL_OLD(V_x_y, i + 1, j + 1); 				\
-			EL(V_y_y, i + 1, j + 1) = EL_OLD(V_y_y, i + 1, j + 1); 				\
 			EL(Sigma_x_xy, i + 1, j + 1) = EL_OLD(Sigma_x_xy, i + 1, j + 1); 	\
 			EL(Sigma_y_xy, i + 1, j + 1) = EL_OLD(Sigma_y_xy, i + 1, j + 1); 	\
 		} 																		\
 	} 																			\
       																			\
-	EL(Vx, i, j) = EL_OLD(Vx, i, j); 											\
-	EL(Vy, i, j) = EL_OLD(Vy, i, j); 											\
 	index_copy1 = Ind_Sigma_xy(i, j); 											\
 	ELD(Rxy, index_copy1) = ELD_OLD(Rxy, index_copy1); 							\
 	EL(Sigma_xy, i, j) = EL_OLD(Sigma_xy, i, j);								\
@@ -692,14 +721,12 @@ if IS_ ## _VarName ## _SELECTED(INHOST(SelMapsRMSPeak)) \
                                                 								\
 	if (i == N1 - 1)                            								\
 	{ 																			\
-		EL(Vx, i + 1, j) = EL_OLD(Vx, i + 1, j); 								\
 		index_copy1 = Ind_Sigma_xy(i + 1, j); 									\
 		ELD(Rxy, index_copy1) = ELD_OLD(Rxy, index_copy1); 						\
 		EL(Sigma_xy, i + 1, j) = EL_OLD(Sigma_xy, i + 1, j); 					\
 	} 																			\
 	if (j == N2 - 1) 															\
 	{ 																			\
-		EL(Vy, i, j + 1) = EL_OLD(Vy, i, j + 1); 								\
 		index_copy1 = Ind_Sigma_xy(i, j + 1); 									\
 		ELD(Rxy, index_copy1) = ELD_OLD(Rxy, index_copy1); 						\
 		EL(Sigma_xy, i, j + 1) = EL_OLD(Sigma_xy, i, j + 1); 					\
@@ -714,7 +741,47 @@ if IS_ ## _VarName ## _SELECTED(INHOST(SelMapsRMSPeak)) \
 	index_copy1 = Ind_Sigma_xx(i, j); 											\
 	ELD(Rxx, index_copy1) = ELD_OLD(Rxx, index_copy1); 							\
 	ELD(Ryy, index_copy1) = ELD_OLD(Ryy, index_copy1); 							\
-	threadgroup_barrier(metal::mem_flags::mem_threadgroup);
+	// threadgroup_barrier(metal::mem_flags::mem_threadgroup);
+
+#define MLX_PARTICLE_COPY	 													\
+	/* Copy the data from the old buffer to the new one */ 						\					
+	/* This is needed for the MLX kernel compilation */ 						\						
+	if (IsOnPML_I(i) == 1 || IsOnPML_J(j) == 1)									\
+	{	                                                    					\
+		EL(V_x_x, i, j) = EL_OLD(V_x_x, i, j);			 						\
+		EL(V_y_x, i, j) = EL_OLD(V_y_x, i, j);              					\
+		EL(V_x_y, i, j) = EL_OLD(V_x_y, i, j);              					\
+		EL(V_y_y, i, j) = EL_OLD(V_y_y, i, j);              					\
+                                                            					\
+		if (i == N1 - 1)                                    					\
+		{                                                   					\
+			EL(V_x_x, i + 1, j) = EL_OLD(V_x_x, i + 1, j);  					\
+			EL(V_y_x, i + 1, j) = EL_OLD(V_y_x, i + 1, j);  					\
+		} 																		\
+		if (j == N2 - 1) 														\
+		{ 																		\
+			EL(V_x_y, i, j + 1) = EL_OLD(V_x_y, i, j + 1); 						\
+			EL(V_y_y, i, j + 1) = EL_OLD(V_y_y, i, j + 1); 						\
+		} 																		\
+	} 																			\
+      																			\
+	EL(Vx, i, j) = EL_OLD(Vx, i, j); 											\
+	EL(Vy, i, j) = EL_OLD(Vy, i, j); 											\
+                                                								\
+	if (i == N1 - 1)                            								\
+	{ 																			\
+		EL(Vx, i + 1, j) = EL_OLD(Vx, i + 1, j); 								\
+	} 																			\
+	if (j == N2 - 1) 															\
+	{ 																			\
+		EL(Vy, i, j + 1) = EL_OLD(Vy, i, j + 1); 								\
+	} 																			\
+	  																			\
+	// threadgroup_barrier(metal::mem_flags::mem_threadgroup);
 //----- MLX HEADER END -----//
 #endif
 /// PMLS
+
+//----- MLX HEADER START -----//
+#define IndexSensorMap_pr k_IndexSensorMap_pr
+//----- MLX HEADER END -----//

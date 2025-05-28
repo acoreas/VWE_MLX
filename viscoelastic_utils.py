@@ -761,3 +761,10 @@ def VWE_post_kernel_processing(results,
             return RetValueSensors,V,RetValuePeak,InputParam
         else:
             raise SystemError("How we got a condition where no RMS or Peak value was selected")
+        
+def calc_dice_coeff(truth_array, test_array):
+    # DICE coefficient calculation
+    matches = np.isclose(test_array,truth_array)
+    matches_count = len(matches[matches==True])
+    dice_coeff = 2 * matches_count / (truth_array.size + test_array.size)
+    return dice_coeff

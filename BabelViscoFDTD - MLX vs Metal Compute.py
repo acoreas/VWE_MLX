@@ -214,8 +214,8 @@ class VWE:
         AllC=''
         for l in SCode:
             AllC+=l
-        if not self.using_mlx:
-            print(AllC)
+        # if not self.using_mlx:
+        #     print(AllC)
         
         # Create dictionary containing zero filled arrays to be used for kernel outputs, arrays use fortran convention     
         ArrayResCPU={}
@@ -303,7 +303,7 @@ class VWE:
         print('before exec nref',nref)
         
         # Comment out line below to run full simulation
-        # TimeSteps = 3
+        # TimeSteps = 5
         print(f'Number of time steps: {TimeSteps}')
         
         for nStep in range(TimeSteps):
@@ -312,7 +312,7 @@ class VWE:
             if nStep == 0:
                 init_value_tmp = 0.0
             else:
-                init_value_tmp = 0.0 # Have been changing when testing
+                init_value_tmp = 100.0 # Have been changing when testing
 
             # Print kernel code for last loop
             if nStep == TimeSteps - 1:
@@ -328,22 +328,6 @@ class VWE:
             # print(f"Kernel Size: {np.prod(DimsKernel['MAIN_1'])}")
 
             if self.using_mlx:
-                # mlx_inputs = [self.constant_buffer_uint,
-                #               self.index_mex,
-                #               self.index_uint,
-                #               self.uint_buffer,
-                #               self.mex_buffer[0],
-                #               self.mex_buffer[1],
-                #               self.mex_buffer[2],
-                #               self.mex_buffer[3],
-                #               self.mex_buffer[4],
-                #               self.mex_buffer[5],
-                #               self.mex_buffer[6],
-                #               self.mex_buffer[7],
-                #               self.mex_buffer[8],
-                #               self.mex_buffer[9],
-                #               self.mex_buffer[10],
-                #               self.mex_buffer[11]]
                 
                 mlx_output_shapes = [self.mex_buffer[0].shape,
                                      self.mex_buffer[1].shape,
@@ -375,7 +359,7 @@ class VWE:
                     nSize=np.prod(DimsKernel[i])
                     
                     # Run stress kernel
-                    tmp_mex_buffer =self.AllStressKernels[i](inputs=[self.constant_buffer_uint,
+                    stress_output_buffer = self.AllStressKernels[i](inputs=[self.constant_buffer_uint,
                                                                      self.index_mex,
                                                                      self.index_uint,
                                                                      self.uint_buffer,
@@ -399,19 +383,19 @@ class VWE:
                                                              init_value=init_value_tmp,
                                                              stream=self.ctx)
                     
-                    # Update mex_buffer except for 8 and 9 indices
-                    self.mex_buffer[0] = tmp_mex_buffer[0]
-                    self.mex_buffer[1] = tmp_mex_buffer[1]
-                    self.mex_buffer[2] = tmp_mex_buffer[2]
-                    self.mex_buffer[3] = tmp_mex_buffer[3]
-                    self.mex_buffer[4] = tmp_mex_buffer[4]
-                    self.mex_buffer[5] = tmp_mex_buffer[5]
-                    self.mex_buffer[6] = tmp_mex_buffer[6]
-                    self.mex_buffer[7] = tmp_mex_buffer[7]
+                    # Update mex_buffer except for read only buffers
+                    # self.mex_buffer[0] = tmp_mex_buffer[0]
+                    # self.mex_buffer[1] = tmp_mex_buffer[1]
+                    self.mex_buffer[2] = stress_output_buffer[2]
+                    self.mex_buffer[3] = stress_output_buffer[3]
+                    self.mex_buffer[4] = stress_output_buffer[4]
+                    self.mex_buffer[5] = stress_output_buffer[5]
+                    self.mex_buffer[6] = stress_output_buffer[6]
+                    self.mex_buffer[7] = stress_output_buffer[7]
                     # self.mex_buffer[8] = tmp_mex_buffer[8]
                     # self.mex_buffer[9] = tmp_mex_buffer[9]
-                    self.mex_buffer[10] = tmp_mex_buffer[10]
-                    self.mex_buffer[11] = tmp_mex_buffer[11]
+                    self.mex_buffer[10] = stress_output_buffer[10]
+                    # self.mex_buffer[11] = stress_output_buffer[11]
                 
                     # Evaluate to prevent compute graph from getting too large
                     mx.eval(self.mex_buffer[0],
@@ -431,7 +415,7 @@ class VWE:
                     nSize=np.prod(DimsKernel[i])
                     
                     # Run particle kernel
-                    tmp_mex_buffer = self.AllParticleKernels[i](inputs=[self.constant_buffer_uint,
+                    particle_output_buffer = self.AllParticleKernels[i](inputs=[self.constant_buffer_uint,
                                                                         self.index_mex,
                                                                         self.index_uint,
                                                                         self.uint_buffer,
@@ -455,19 +439,19 @@ class VWE:
                                                                 init_value=init_value_tmp,
                                                                 stream=self.ctx)
                 
-                    # Update mex_buffer except for 8 and 9 indices
-                    self.mex_buffer[0] = tmp_mex_buffer[0]
-                    self.mex_buffer[1] = tmp_mex_buffer[1]
-                    self.mex_buffer[2] = tmp_mex_buffer[2]
-                    self.mex_buffer[3] = tmp_mex_buffer[3]
-                    self.mex_buffer[4] = tmp_mex_buffer[4]
-                    self.mex_buffer[5] = tmp_mex_buffer[5]
-                    self.mex_buffer[6] = tmp_mex_buffer[6]
-                    self.mex_buffer[7] = tmp_mex_buffer[7]
+                    # Update mex_buffer except for read only buffers
+                    self.mex_buffer[0] = particle_output_buffer[0]
+                    self.mex_buffer[1] = particle_output_buffer[1]
+                    # self.mex_buffer[2] = tmp_mex_buffer[2]
+                    # self.mex_buffer[3] = tmp_mex_buffer[3]
+                    # self.mex_buffer[4] = tmp_mex_buffer[4]
+                    # self.mex_buffer[5] = tmp_mex_buffer[5]
+                    # self.mex_buffer[6] = tmp_mex_buffer[6]
+                    # self.mex_buffer[7] = tmp_mex_buffer[7]
                     # self.mex_buffer[8] = tmp_mex_buffer[8]
                     # self.mex_buffer[9] = tmp_mex_buffer[9]
-                    self.mex_buffer[10] = tmp_mex_buffer[10]
-                    self.mex_buffer[11] = tmp_mex_buffer[11]
+                    self.mex_buffer[10] = particle_output_buffer[10]
+                    # self.mex_buffer[11] = particle_output_buffer[11]
                     
                     # Evaluate to prevent compute graph from getting too large
                     mx.eval(self.mex_buffer[0],
@@ -483,42 +467,65 @@ class VWE:
                             self.mex_buffer[10],
                             self.mex_buffer[11])
 
-                # if (nStep % arguments['SensorSubSampling'])==0  and (int(nStep/arguments['SensorSubSampling'])>=arguments['SensorStart']):
-                #     # Run sensors kernel
-                #     tmp_mex_buffer = self.SensorsKernel(inputs=mlx_inputs,
-                #                                         output_shapes=mlx_output_shapes,
-                #                                         output_dtypes=mlx_output_dtypes,
-                #                                         grid=(np.prod(self.globalSensor),1,1),
-                #                                         threadgroup=(256, 1, 1),
-                #                                         verbose=False)
+                if (nStep % arguments['SensorSubSampling'])==0  and (int(nStep/arguments['SensorSubSampling'])>=arguments['SensorStart']):
+                    # Run sensors kernel
+                    sensors_output_buffer = self.SensorsKernel(inputs=[self.constant_buffer_uint,
+                                                                       self.index_mex,
+                                                                       self.index_uint,
+                                                                       self.uint_buffer,
+                                                                       self.mex_buffer[0],
+                                                                       self.mex_buffer[1],
+                                                                       self.mex_buffer[2],
+                                                                       self.mex_buffer[3],
+                                                                       self.mex_buffer[4],
+                                                                       self.mex_buffer[5],
+                                                                       self.mex_buffer[6],
+                                                                       self.mex_buffer[7],
+                                                                       self.mex_buffer[8],
+                                                                       self.mex_buffer[9],
+                                                                       self.mex_buffer[10],
+                                                                       self.mex_buffer[11]],
+                                                        output_shapes=mlx_output_shapes,
+                                                        output_dtypes=mlx_output_dtypes,
+                                                        grid=(np.prod(self.globalSensor),1,1),
+                                                        threadgroup=(256, 1, 1),
+                                                        verbose=False,
+                                                        stream=self.ctx)
                 
-                #     # Update mex_buffer except for 8 and 9 indices
-                #     self.mex_buffer[0] = tmp_mex_buffer[0]
-                #     self.mex_buffer[1] = tmp_mex_buffer[1]
-                #     self.mex_buffer[2] = tmp_mex_buffer[2]
-                #     self.mex_buffer[3] = tmp_mex_buffer[3]
-                #     self.mex_buffer[4] = tmp_mex_buffer[4]
-                #     self.mex_buffer[5] = tmp_mex_buffer[5]
-                #     self.mex_buffer[6] = tmp_mex_buffer[6]
-                #     self.mex_buffer[7] = tmp_mex_buffer[7]
-                #     # self.mex_buffer[8] = tmp_mex_buffer[8]
-                #     # self.mex_buffer[9] = tmp_mex_buffer[9]
-                #     self.mex_buffer[10] = tmp_mex_buffer[10]
-                #     self.mex_buffer[11] = tmp_mex_buffer[11]
+                    # Update mex_buffer except for read only buffers
+                    # self.mex_buffer[0] = tmp_mex_buffer[0]
+                    # self.mex_buffer[1] = tmp_mex_buffer[1]
+                    # self.mex_buffer[2] = tmp_mex_buffer[2]
+                    # self.mex_buffer[3] = tmp_mex_buffer[3]
+                    # self.mex_buffer[4] = tmp_mex_buffer[4]
+                    # self.mex_buffer[5] = tmp_mex_buffer[5]
+                    # self.mex_buffer[6] = tmp_mex_buffer[6]
+                    # self.mex_buffer[7] = tmp_mex_buffer[7]
+                    # self.mex_buffer[8] = tmp_mex_buffer[8]
+                    # self.mex_buffer[9] = tmp_mex_buffer[9]
+                    # self.mex_buffer[10] = tmp_mex_buffer[10]
+                    num_sensors = np.prod(self.globalSensor)
+                    sensor_start =arguments['SensorStart']
+                    sub_sampling = arguments['SensorSubSampling']
+                    subarrsize = num_sensors * (TimeSteps// sub_sampling + 1 - sensor_start)
+                    for ind in range(self._outparams['NumberSelSensorMaps']):
+                        so_start = int(((nStep // sub_sampling - sensor_start) * num_sensors) + (subarrsize * ind))
+                        so_end = int(so_start + num_sensors)
+                        self.mex_buffer[11][so_start:so_end] = sensors_output_buffer[11][so_start:so_end]
                     
-                #     # Evaluate to prevent compute graph from getting too large
-                #     mx.eval(self.mex_buffer[0],
-                #             self.mex_buffer[1],
-                #             self.mex_buffer[2],
-                #             self.mex_buffer[3],
-                #             self.mex_buffer[4],
-                #             self.mex_buffer[5],
-                #             self.mex_buffer[6],
-                #             self.mex_buffer[7],
-                #             self.mex_buffer[8],
-                #             self.mex_buffer[9],
-                #             self.mex_buffer[10],
-                #             self.mex_buffer[11])
+                    # Evaluate to prevent compute graph from getting too large
+                    mx.eval(self.mex_buffer[0],
+                            self.mex_buffer[1],
+                            self.mex_buffer[2],
+                            self.mex_buffer[3],
+                            self.mex_buffer[4],
+                            self.mex_buffer[5],
+                            self.mex_buffer[6],
+                            self.mex_buffer[7],
+                            self.mex_buffer[8],
+                            self.mex_buffer[9],
+                            self.mex_buffer[10],
+                            self.mex_buffer[11])
                     
                 if nStep % 50 == 0:
                     print(f"Working on time step {nStep}")
@@ -567,25 +574,25 @@ class VWE:
                                                 self.mex_buffer[11])
 
                     AllHandles.append(handle)
-                # if (nStep % arguments['SensorSubSampling'])==0  and (int(nStep/arguments['SensorSubSampling'])>=arguments['SensorStart']):
-                #     handle=self.SensorsKernel(np.prod(self.globalSensor),
-                #                     self.constant_buffer_uint,
-                #                     self.index_mex,
-                #                     self.index_uint, 
-                #                     self.uint_buffer,
-                #                     self.mex_buffer[0],
-                #                     self.mex_buffer[1],
-                #                     self.mex_buffer[2],
-                #                     self.mex_buffer[3],
-                #                     self.mex_buffer[4],
-                #                     self.mex_buffer[5],
-                #                     self.mex_buffer[6],
-                #                     self.mex_buffer[7],
-                #                     self.mex_buffer[8],
-                #                     self.mex_buffer[9],
-                #                     self.mex_buffer[10],
-                #                     self.mex_buffer[11])
-                #     AllHandles.append(handle)
+                if (nStep % arguments['SensorSubSampling'])==0  and (int(nStep/arguments['SensorSubSampling'])>=arguments['SensorStart']):
+                    handle=self.SensorsKernel(np.prod(self.globalSensor),
+                                    self.constant_buffer_uint,
+                                    self.index_mex,
+                                    self.index_uint, 
+                                    self.uint_buffer,
+                                    self.mex_buffer[0],
+                                    self.mex_buffer[1],
+                                    self.mex_buffer[2],
+                                    self.mex_buffer[3],
+                                    self.mex_buffer[4],
+                                    self.mex_buffer[5],
+                                    self.mex_buffer[6],
+                                    self.mex_buffer[7],
+                                    self.mex_buffer[8],
+                                    self.mex_buffer[9],
+                                    self.mex_buffer[10],
+                                    self.mex_buffer[11])
+                    AllHandles.append(handle)
                 self.ctx.commit_command_buffer()
                 self.ctx.wait_command_buffer()
                 while len(AllHandles)>0:
@@ -742,41 +749,102 @@ class VWE:
         mlx_particle_code = self._extract_MLX_code(kernel_code,start_flag="//----- MLX PARTICLE START -----//", end_flag="//----- MLX PARTICLE END -----//")
         mlx_sensors_code = self._extract_MLX_code(kernel_code,start_flag="//----- MLX SENSORS START -----//", end_flag="//----- MLX SENSORS END -----//")      
         
-        input_names = ['p_CONSTANT_BUFFER_UINT',
-                       'p_INDEX_MEX',
-                       'p_INDEX_UINT',
-                       'p_UINT_BUFFER',
-                       'p_MEX_BUFFER_0_OLD',
-                       'p_MEX_BUFFER_1_OLD',
-                       'p_MEX_BUFFER_2_OLD',
-                       'p_MEX_BUFFER_3_OLD',
-                       'p_MEX_BUFFER_4_OLD',
-                       'p_MEX_BUFFER_5_OLD',
-                       'p_MEX_BUFFER_6_OLD',
-                       'p_MEX_BUFFER_7_OLD',
-                       'p_MEX_BUFFER_8',
-                       'p_MEX_BUFFER_9',
-                       'p_MEX_BUFFER_10_OLD',
-                       'p_MEX_BUFFER_11_OLD'
-                       ]
+        stress_input_names = ['p_CONSTANT_BUFFER_UINT',
+                              'p_INDEX_MEX',
+                              'p_INDEX_UINT',
+                              'p_UINT_BUFFER',
+                              'p_MEX_BUFFER_0',
+                              'p_MEX_BUFFER_1',
+                              'p_MEX_BUFFER_2_OLD',
+                              'p_MEX_BUFFER_3_OLD',
+                              'p_MEX_BUFFER_4_OLD',
+                              'p_MEX_BUFFER_5_OLD',
+                              'p_MEX_BUFFER_6_OLD',
+                              'p_MEX_BUFFER_7_OLD',
+                              'p_MEX_BUFFER_8',
+                              'p_MEX_BUFFER_9',
+                              'p_MEX_BUFFER_10_OLD',
+                              'p_MEX_BUFFER_11'
+                              ]
         
-        output_names = ['p_MEX_BUFFER_0',
-                        'p_MEX_BUFFER_1',
-                        'p_MEX_BUFFER_2',
-                        'p_MEX_BUFFER_3',
-                        'p_MEX_BUFFER_4',
-                        'p_MEX_BUFFER_5',
-                        'p_MEX_BUFFER_6',
-                        'p_MEX_BUFFER_7',
-                        'p_MEX_BUFFER_8_NOT_USED',
-                        'p_MEX_BUFFER_9_NOT_USED',
-                        'p_MEX_BUFFER_10',
-                        'p_MEX_BUFFER_11']
+        stress_output_names = ['p_MEX_BUFFER_0_NOT_USED',
+                               'p_MEX_BUFFER_1_NOT_USED',
+                               'p_MEX_BUFFER_2',
+                               'p_MEX_BUFFER_3',
+                               'p_MEX_BUFFER_4',
+                               'p_MEX_BUFFER_5',
+                               'p_MEX_BUFFER_6',
+                               'p_MEX_BUFFER_7',
+                               'p_MEX_BUFFER_8_NOT_USED',
+                               'p_MEX_BUFFER_9_NOT_USED',
+                               'p_MEX_BUFFER_10',
+                               'p_MEX_BUFFER_11_NOT_USED']
+        
+        particle_input_names = ['p_CONSTANT_BUFFER_UINT',
+                                'p_INDEX_MEX',
+                                'p_INDEX_UINT',
+                                'p_UINT_BUFFER',
+                                'p_MEX_BUFFER_0_OLD',
+                                'p_MEX_BUFFER_1_OLD',
+                                'p_MEX_BUFFER_2',
+                                'p_MEX_BUFFER_3',
+                                'p_MEX_BUFFER_4',
+                                'p_MEX_BUFFER_5',
+                                'p_MEX_BUFFER_6',
+                                'p_MEX_BUFFER_7',
+                                'p_MEX_BUFFER_8',
+                                'p_MEX_BUFFER_9',
+                                'p_MEX_BUFFER_10_OLD',
+                                'p_MEX_BUFFER_11'
+                                ]
+        
+        particle_output_names = ['p_MEX_BUFFER_0',
+                                 'p_MEX_BUFFER_1',
+                                 'p_MEX_BUFFER_2_NOT_USED',
+                                 'p_MEX_BUFFER_3_NOT_USED',
+                                 'p_MEX_BUFFER_4_NOT_USED',
+                                 'p_MEX_BUFFER_5_NOT_USED',
+                                 'p_MEX_BUFFER_6_NOT_USED',
+                                 'p_MEX_BUFFER_7_NOT_USED',
+                                 'p_MEX_BUFFER_8_NOT_USED',
+                                 'p_MEX_BUFFER_9_NOT_USED',
+                                 'p_MEX_BUFFER_10',
+                                 'p_MEX_BUFFER_11_NOT_USED']
+        
+        sensors_input_names = ['p_CONSTANT_BUFFER_UINT',
+                               'p_INDEX_MEX',
+                               'p_INDEX_UINT',
+                               'p_UINT_BUFFER',
+                               'p_MEX_BUFFER_0',
+                               'p_MEX_BUFFER_1',
+                               'p_MEX_BUFFER_2',
+                               'p_MEX_BUFFER_3',
+                               'p_MEX_BUFFER_4',
+                               'p_MEX_BUFFER_5',
+                               'p_MEX_BUFFER_6',
+                               'p_MEX_BUFFER_7',
+                               'p_MEX_BUFFER_8',
+                               'p_MEX_BUFFER_9',
+                               'p_MEX_BUFFER_10',
+                               'p_MEX_BUFFER_11_OLD']
+        
+        sensors_output_names = ['p_MEX_BUFFER_0_NOT_USED',
+                                'p_MEX_BUFFER_1_NOT_USED',
+                                'p_MEX_BUFFER_2_NOT_USED',
+                                'p_MEX_BUFFER_3_NOT_USED',
+                                'p_MEX_BUFFER_4_NOT_USED',
+                                'p_MEX_BUFFER_5_NOT_USED',
+                                'p_MEX_BUFFER_6_NOT_USED',
+                                'p_MEX_BUFFER_7_NOT_USED',
+                                'p_MEX_BUFFER_8_NOT_USED',
+                                'p_MEX_BUFFER_9_NOT_USED',
+                                'p_MEX_BUFFER_10_NOT_USED',
+                                'p_MEX_BUFFER_11']
         
         for k in PartsStress:
             self.AllStressKernels[k] = mx.fast.metal_kernel(name = k+"_StressKernel",
-                                                            input_names = input_names,
-                                                            output_names = output_names,
+                                                            input_names = stress_input_names,
+                                                            output_names = stress_output_names,
                                                             atomic_outputs = False,
                                                             header = mlx_header_code + "\n\n",
                                                             source = mlx_stress_code,
@@ -784,16 +852,16 @@ class VWE:
 
         for k in PartsParticle:
             self.AllParticleKernels[k] = mx.fast.metal_kernel(name = k+"_ParticleKernel",
-                                                              input_names = input_names,
-                                                              output_names = output_names,
+                                                              input_names = particle_input_names,
+                                                              output_names = particle_output_names,
                                                               atomic_outputs = False,
                                                               header = mlx_header_code + "\n\n",
                                                               source = mlx_particle_code,
                                                               ensure_row_contiguous=False)
     
         self.SensorsKernel = mx.fast.metal_kernel(name = 'SensorsKernel',
-                                                  input_names = input_names,
-                                                  output_names = output_names,
+                                                  input_names = sensors_input_names,
+                                                  output_names = sensors_output_names,
                                                   atomic_outputs = False,
                                                   header = mlx_header_code + "\n\n",
                                                   source = mlx_sensors_code,
@@ -1198,9 +1266,9 @@ def main():
                                                 USE_SINGLE=True,
                                                 DT=dt,
                                                 QfactorCorrection=True,
-                                                SelRMSorPeak=1, #we select  only RMS data
-                                                SelMapsRMSPeakList=['Pressure'],
-                                                SelMapsSensorsList=['Vx','Vy','Pressure'],
+                                                SelRMSorPeak=3, #we select  only RMS data
+                                                SelMapsRMSPeakList=['Vx','Vy','Pressure','Sigmaxx','Sigmayy','Sigmaxy'],
+                                                SelMapsSensorsList=['Vx','Vy','Pressure','Sigmaxx','Sigmayy','Sigmaxy'],
                                                 SensorSubSampling=sensor_steps,
                                                 DefaultGPUDeviceName=gpu_device,
                                                 TypeSource=0)
@@ -1217,7 +1285,7 @@ def main():
     results_mlx = vwe_mlx.kernel_execution(input_params_mlx,output_dict_mlx)
 
     # Post kernel processing
-    sensor_results_mlx,last_map_results_mlx,rms_results_mlx,snapshot_results_mlx = vwe_utils.VWE_post_kernel_processing(results_mlx,input_params_mlx,post_kernel_args_mlx)
+    sensor_results_mlx,last_map_results_mlx,rms_results_mlx,peak_results_mlx,snapshot_results_mlx = vwe_utils.VWE_post_kernel_processing(results_mlx,input_params_mlx,post_kernel_args_mlx)
     
     
     
@@ -1229,95 +1297,176 @@ def main():
     results_mc = vwe_mc.kernel_execution(input_params_mc,output_dict_mc)
 
     # Post kernel processing
-    sensor_results_mc,last_map_results_mc,rms_results_mc,snapshot_results_mc = vwe_utils.VWE_post_kernel_processing(results_mc,input_params_mc,post_kernel_args_mc)
+    sensor_results_mc,last_map_results_mc,rms_results_mc,peak_results_mc,snapshot_results_mc = vwe_utils.VWE_post_kernel_processing(results_mc,input_params_mc,post_kernel_args_mc)
     
     
     
     #%% PLOT DATA
-    # Save to new name
-    results_map_mc = last_map_results_mc['Sigma_xy'].T
-    results_map_mlx = last_map_results_mlx['Sigma_xy'].T
-    # results_map_mc = last_map_results_mc['Vx'].T
-    # results_map_mlx = last_map_results_mlx['Vx'].T
-    # results_map_mc = last_map_results_mc['Vy'].T
-    # results_map_mlx = last_map_results_mlx['Vy'].T
-    # results_map_mc = last_map_results_mc['Pressure'].T
-    # results_map_mlx = last_map_results_mlx['Pressure'].T
-    # results_map_mc = rms_results_mc['Pressure'].T
-    # results_map_mlx = rms_results_mc['Pressure'].T
-    if gpu_device =='M3': #we save the results for a latter comparison to M1-based results
-        np.savez_compressed('results_map_mlx_M3',results_map_mlx_M3=results_map_mlx)
-    # results_map_mlx = results_map_mc
+    # # Save to new name
+    # # results_map_mc = last_map_results_mc['Vx'].T
+    # # results_map_mlx = last_map_results_mlx['Vx'].T    
+    # # results_map_mc = peak_results_mc['Vx'].T
+    # # results_map_mlx = peak_results_mlx['Vx'].T
+    # # results_map_mc = rms_results_mc['Vx'].T
+    # # results_map_mlx = rms_results_mlx['Vx'].T
+    # results_map_mc = sensor_results_mc['Vx'].T
+    # results_map_mlx = sensor_results_mlx['Vx'].T
+    # if gpu_device =='M3': #we save the results for a latter comparison to M1-based results
+    #     np.savez_compressed('results_map_mlx_M3',results_map_mlx_M3=results_map_mlx)
+    # # results_map_mlx = results_map_mc
 
-    # Create figure and axis
-    results_figure = plt.figure(figsize=(12, 4))
-    results_plot_1,results_plot_2 = results_figure.figure.subplots(1,2)
+    # # Create figure and axis
+    # results_figure = plt.figure(figsize=(12, 4))
+    # results_plot_1,results_plot_2 = results_figure.figure.subplots(1,2)
 
-    # Display Metal Compute RMS Pressure map
-    im1 = results_plot_1.imshow(
-        results_map_mc,
-        # extent=[xfield.min(), xfield.max(), zfield.max(), zfield.min()],
-        # cmap=plt.cm.jet,
-        # vmin=BaselineTemperature
-    )
+    # # Display Metal Compute RMS Pressure map
+    # im1 = results_plot_1.imshow(
+    #     results_map_mc,
+    #     # extent=[xfield.min(), xfield.max(), zfield.max(), zfield.min()],
+    #     # cmap=plt.cm.jet,
+    #     # vmin=BaselineTemperature
+    # )
 
-    # Display MLX temperature map
-    im2 = results_plot_2.imshow(
-        results_map_mlx,
-        # extent=[xfield.min(), xfield.max(), zfield.max(), zfield.min()],
-        # cmap=plt.cm.jet,
-        # vmin=BaselineTemperature
-    )
+    # # Display MLX temperature map
+    # im2 = results_plot_2.imshow(
+    #     results_map_mlx,
+    #     # extent=[xfield.min(), xfield.max(), zfield.max(), zfield.min()],
+    #     # cmap=plt.cm.jet,
+    #     # vmin=BaselineTemperature
+    # )
 
-    # Set titles
-    results_plot_1.set_title('Current System PyMetal Compute Pressure (Pa)')
-    results_plot_2.set_title('Current System MLX Pressure (Pa)')
+    # # Set titles
+    # results_plot_1.set_title('Current System PyMetal Compute Pressure (Pa)')
+    # results_plot_2.set_title('Current System MLX Pressure (Pa)')
 
-    # Add color bars
-    plt.colorbar(im1, ax=results_plot_1)
-    plt.colorbar(im2, ax=results_plot_2)
+    # # Add color bars
+    # plt.colorbar(im1, ax=results_plot_1)
+    # plt.colorbar(im2, ax=results_plot_2)
 
-    # Show plots
-    # plt.show()
+    # # Show plots
+    # # plt.show()
     
-    
-    
-    #%% COMPARE DATA - MLX VS PYMETAL COMPUTE
-    tolerance = 1e-6
-    data_match = np.all(results_map_mc == results_map_mlx)
-    print("Data matches?", data_match)
+    # Select map of interest
+    # moi = "last_map"
+    # moi = "rms_results"
+    # moi = "peak_results"
+    moi = "sensor_results"
 
-    if not data_match:
-        # DICE coefficient calculation
-        matches = abs(results_map_mlx - results_map_mc) < tolerance
-        matches_count = len(matches[matches==True])
-        dice_coeff = 2 * matches_count / (results_map_mc.size + results_map_mlx.size)
-        print(f"Dice Coefficient: {dice_coeff}")
+    if moi == "last_map":
+        output_vars = ['Vx','Vy','Pressure','Sigma_xx','Sigma_yy','Sigma_xy']
+    else:
+        output_vars = ['Vx','Vy','Pressure','Sigmaxx','Sigmayy','Sigmaxy']
+    num_vars = len(output_vars)
 
-        # Plot difference images
-        diffs = abs(results_map_mlx.T - results_map_mc.T)
+    fig, axes = plt.subplots(nrows=num_vars, ncols=3, figsize=(16, 6*num_vars))
+    fig.suptitle(f"Output Maps for {moi} (MC vs MLX)",fontsize=12)
 
-        fig, axs = plt.subplots(1, 1, figsize=(4, 5))
-        axs.set_title('MLX vs PyMetal Compute\nDifferences')
-        diff_im1 = axs.imshow(diffs.T)
-        plt.colorbar(diff_im1, ax=axs)
-        plt.tight_layout()
-        # Show plots
-        plt.show()
-
-        # Get difference histograms
-        hist,bins = np.histogram(diffs)
-        print(f"Difference Histogram")
-        for bin in range(len(bins)-1):
-            print(f"{bins[bin]:.2f} to {bins[bin+1]:.2f}: {hist[bin]}")
-
-        # Mean square error calculation
-        mse = mean_squared_error(results_map_mc,results_map_mlx)
+    # Iterate through rows
+    images = []
+    for index,output_key in enumerate(output_vars):
+        
+        # Grab results
+        if moi == "last_map":
+            results_mc = last_map_results_mc[output_key].T
+            results_mlx = last_map_results_mlx[output_key].T
+        elif moi == "rms_results":
+            results_mc = rms_results_mc[output_key].T
+            results_mlx = rms_results_mlx[output_key].T
+        elif moi == "peak_results":
+            results_mc = peak_results_mc[output_key].T
+            results_mlx = peak_results_mlx[output_key].T
+        elif moi == "sensor_results":
+            results_mc = sensor_results_mc[output_key]
+            results_mlx = sensor_results_mlx[output_key]
+        else:
+            raise Exception("Invalid output map given")
+        
+        # Plot row
+        row = index
+        
+        if moi == 'sensor_results':
+            for n, index2 in enumerate( input_params_mc['IndexSensorMap']): 
+                i=int(index2%N1)
+                j=int(index2/N1)
+                if i==int(N1/2) and j==int(N2/2):
+                    CentralPoint=n
+            im1 = axes[row,0].plot(sensor_results_mc['time']*1e6,results_mc[CentralPoint])
+            im2 = axes[row,1].plot(sensor_results_mlx['time']*1e6,results_mlx[CentralPoint])
+            im3 = axes[row,2].plot(sensor_results_mc['time']*1e6,results_mc[CentralPoint]-results_mlx[CentralPoint])
+            
+        else:
+            im1 = axes[row,0].imshow(results_mc)
+            im2 = axes[row,1].imshow(results_mlx)
+            im3 = axes[row,2].imshow(abs(results_mc-results_mlx))
+        
+        if moi != 'sensor_results':
+            # Add colourbars
+            plt.colorbar(im1, ax=axes[row,0])
+            plt.colorbar(im2, ax=axes[row,1])
+            plt.colorbar(im3, ax=axes[row,2])
+        
+        # Add titles
+        axes[row,0].set_title(f'Metal Compute',fontsize='16')
+        axes[row,1].set_title(f'MLX',fontsize='16')
+        axes[row,2].set_title(f'Differences',fontsize='16')
+        
+        # Add ylabel
+        axes[row,0].set_ylabel(output_key+'\n', fontsize='16')
+        
+        # Calculate and print difference metrics    
+        dice_score = vwe_utils.calc_dice_coeff(results_mc,results_mlx)
+        mse = mean_squared_error(results_mc,results_mlx)
+        nrmse = normalized_root_mse(results_mc,results_mlx,normalization='min-max')
+        
+        print(output_key)
+        print(f"DICE Score: {dice_score}")
         print(f"Mean square error: {mse}")
+        print(f"Normalized root mean square error: {nrmse}\n")
+        
 
-        # Normalized root mean square error calculation
-        nrmse = normalized_root_mse(results_map_mc,results_map_mlx,normalization='min-max')
-        print(f"Normalized root mean square error: {nrmse}")
+
+    # Make room for the suptitle by shrinking the layout area
+    plt.tight_layout(rect=[0.1,0,1,0.98])
+    plt.show()
+    
+    
+    
+    # #%% COMPARE DATA - MLX VS PYMETAL COMPUTE
+    # # tolerance = 1e-6
+    # data_match = np.all(results_map_mc == results_map_mlx)
+    # print("Data matches?", data_match)
+
+    # if not data_match:
+    #     # DICE coefficient calculation
+    #     matches = np.isclose(results_map_mlx,results_map_mc)
+    #     matches_count = len(matches[matches==True])
+    #     dice_coeff = 2 * matches_count / (results_map_mc.size + results_map_mlx.size)
+    #     print(f"Dice Coefficient: {dice_coeff}")
+
+    #     # Plot difference images
+    #     diffs = abs(results_map_mlx.T - results_map_mc.T)
+
+    #     fig, axs = plt.subplots(1, 1, figsize=(4, 5))
+    #     axs.set_title('MLX vs PyMetal Compute\nDifferences')
+    #     diff_im1 = axs.imshow(diffs.T)
+    #     plt.colorbar(diff_im1, ax=axs)
+    #     plt.tight_layout()
+    #     # Show plots
+    #     plt.show()
+
+    #     # Get difference histograms
+    #     hist,bins = np.histogram(diffs)
+    #     print(f"Difference Histogram")
+    #     for bin in range(len(bins)-1):
+    #         print(f"{bins[bin]:.2f} to {bins[bin+1]:.2f}: {hist[bin]}")
+
+    #     # Mean square error calculation
+    #     mse = mean_squared_error(results_map_mc,results_map_mlx)
+    #     print(f"Mean square error: {mse}")
+
+    #     # Normalized root mean square error calculation
+    #     nrmse = normalized_root_mse(results_map_mc,results_map_mlx,normalization='min-max')
+    #     print(f"Normalized root mean square error: {nrmse}")
         
     
     
