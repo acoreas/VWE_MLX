@@ -778,6 +778,37 @@ if IS_ ## _VarName ## _SELECTED(INHOST(SelMapsRMSPeak)) \
 	} 																			\
 	  																			\
 	// threadgroup_barrier(metal::mem_flags::mem_threadgroup);
+
+#define MLX_SENSORS_COPY	 																																	\
+	/* Copy the data from the old buffer to the new one */ 																										\					
+	/* This is needed for the MLX kernel compilation */ 																										\						
+																																								\
+	_PT index_copy1;																																			\
+																																								\
+	for (int time_step = 0; time_step < nStep; time_step++)																										\
+	{																																						\
+		if (time_step % SensorSubSampling != 0)																														\
+			continue;  																																				\
+		index_copy1 = (((_PT)time_step) / ((_PT)SensorSubSampling) - ((_PT)SensorStart)) * ((_PT)NumberSensors) + gid;											\																																				
+																																								\
+		if (IS_Vx_SELECTED(SelMapsSensors))																														\
+			ELD(SensorOutput, index_copy1 + subarrsize * IndexSensor_Vx) = ELD_OLD(SensorOutput, index_copy1 + subarrsize * IndexSensor_Vx);					\
+		if (IS_Vy_SELECTED(SelMapsSensors))																														\
+			ELD(SensorOutput, index_copy1 + subarrsize * IndexSensor_Vy) = ELD_OLD(SensorOutput, index_copy1 + subarrsize * IndexSensor_Vy);					\
+		if (IS_Sigmaxx_SELECTED(SelMapsSensors))																												\
+			ELD(SensorOutput, index_copy1 + subarrsize * IndexSensor_Sigmaxx) = ELD_OLD(SensorOutput, index_copy1 + subarrsize * IndexSensor_Sigmaxx);			\
+		if (IS_Sigmayy_SELECTED(SelMapsSensors))																												\
+			ELD(SensorOutput, index_copy1 + subarrsize * IndexSensor_Sigmayy) = ELD_OLD(SensorOutput, index_copy1 + subarrsize * IndexSensor_Sigmayy);			\
+		if (IS_Sigmaxy_SELECTED(SelMapsSensors))																												\
+			ELD(SensorOutput, index_copy1 + subarrsize * IndexSensor_Sigmaxy) = ELD_OLD(SensorOutput, index_copy1 + subarrsize * IndexSensor_Sigmaxy);			\
+		if (IS_Pressure_SELECTED(SelMapsSensors))																												\
+			ELD(SensorOutput, index_copy1 + subarrsize * IndexSensor_Pressure) = ELD_OLD(SensorOutput, index_copy1 + subarrsize * IndexSensor_Pressure);		\
+		if (IS_Pressure_Gx_SELECTED(SelMapsSensors))																											\
+			ELD(SensorOutput, index_copy1 + subarrsize * IndexSensor_Pressure_gx) = ELD_OLD(SensorOutput, index_copy1 + subarrsize * IndexSensor_Pressure_gx);	\
+		if (IS_Pressure_Gy_SELECTED(SelMapsSensors))																											\
+			ELD(SensorOutput, index_copy1 + subarrsize * IndexSensor_Pressure_gy) = ELD_OLD(SensorOutput, index_copy1 + subarrsize * IndexSensor_Pressure_gy);	\
+	}																																							\
+		// threadgroup_barrier(metal::mem_flags::mem_threadgroup);
 //----- MLX HEADER END -----//
 #endif
 /// PMLS
