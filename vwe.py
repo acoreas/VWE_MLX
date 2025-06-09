@@ -217,8 +217,8 @@ class VWE:
         AllC=''
         for l in SCode:
             AllC+=l
-        if not self.using_mlx:
-            print(AllC)
+        # if not self.using_mlx:
+        #     print(AllC)
         
         # Create dictionary containing zero filled arrays to be used for kernel outputs, arrays use fortran convention     
         ArrayResCPU={}
@@ -317,7 +317,7 @@ class VWE:
             sensor_output_tmp_buffer = mx.zeros(sensor_output_buf_size,dtype=mx.float32)
         
         if self.using_mlx:
-            n_eval = int(250e6/sum(arr.size for arr in self.mex_buffer)) # 250e6 array size was found to be a good point for ensuring fast performance
+            n_eval = int(2500e6/sum(arr.size for arr in self.mex_buffer)) # 250e6 array size was found to be a good point for ensuring fast performance
             n_eval = max(n_eval,1)
                                 
         for nStep in range(TimeSteps):
@@ -423,8 +423,9 @@ class VWE:
                     # start_index = int(((nStep // sub_sampling - sensor_start) * sensor_output_buf_size))
                     # end_index = int(start_index+sensor_output_buf_size)
                     # print(f"Saving into SensorOutput[{start_index}:{end_index}]")
-                    # self.mex_buffer[11][start_index:end_index]
-                    self.mex_buffer[11] \
+                    # self.mex_buffer[11] \
+                    # self.mex_buffer[11][start_index:end_index] \
+                    sensor_output_tmp_buffer \
                     = self.SensorsKernel(inputs=[self.constant_buffer_uint,
                                                                        self.index_mex,
                                                                        self.index_uint,
@@ -440,10 +441,11 @@ class VWE:
                                                                     #    self.mex_buffer[8],
                                                                     #    self.mex_buffer[9],
                                                                     #    self.mex_buffer[10],
-                                                                       self.mex_buffer[11]],
+                                                                    #    self.mex_buffer[11]
+                                                                       ],
                                                                     #    sensor_output_tmp_buffer],
-                                                        # output_shapes=[sensor_output_tmp_buffer.shape],
-                                                        output_shapes=[self.mex_buffer[11].shape],
+                                                        output_shapes=[sensor_output_tmp_buffer.shape],
+                                                        # output_shapes=[self.mex_buffer[11].shape],
                                                         output_dtypes=[self.mex_buffer[11].dtype],
                                                         grid=(np.prod(self.globalSensor),1,1),
                                                         threadgroup=(256, 1, 1),
@@ -451,6 +453,15 @@ class VWE:
                                                         init_value=init_value_tmp,
                                                         stream=self.ctx)[0]
                 
+                for map in ['Vx','Vy','Sigmaxx','Sigmayy','Sigmaxy','Pressure','Pressure_gx','Pressure_gy']:
+                    if arguments['SelMapsSensors'] & self.MASKID[map]:
+                        time_start_idx = ((nStep // sub_sampling - sensor_start) * num_sensors)
+                        host_start_idx = int(time_start_idx + subarrsize * outparams['IndexSensor_'+map])
+                        host_end_idx = int(host_start_idx + num_sensors)
+                        device_start_idx = int(num_sensors * outparams['IndexSensor_'+map])
+                        device_end_idx = int(device_start_idx + num_sensors)
+                        self.mex_buffer[11][host_start_idx:host_end_idx] = sensor_output_tmp_buffer[device_start_idx:device_end_idx] 
+                    
                 if nStep % n_eval == 0:
                     print(f"Working on time step {nStep}")
                     mx.eval(
@@ -513,7 +524,7 @@ class VWE:
 
                     AllHandles.append(handle)
                 if (nStep % arguments['SensorSubSampling'])==0  and (int(nStep/arguments['SensorSubSampling'])>=arguments['SensorStart']):
-                    print(f"Sensors kernel size: {self.globalSensor}")
+                    # print(f"Sensors kernel size: {self.globalSensor}")
                     handle=self.SensorsKernel(np.prod(self.globalSensor),
                                     self.constant_buffer_uint,
                                     self.index_mex,
@@ -768,7 +779,8 @@ class VWE:
                             #    'p_MEX_BUFFER_8',
                             #    'p_MEX_BUFFER_9',
                             #    'p_MEX_BUFFER_10',
-                               'p_MEX_BUFFER_11_OLD']
+                            #    'p_MEX_BUFFER_11_OLD'
+                               ]
         
         sensors_output_names = [
                                 # 'p_MEX_BUFFER_0_NOT_USED',

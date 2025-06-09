@@ -35,7 +35,7 @@ kernel void SensorsKernel(
         subarrsize = (((_PT)NumberSensors) * (((_PT)TimeSteps) / ((_PT)SensorSubSampling) + 1 - ((_PT)SensorStart)));
     index2 = IndexSensorMap_pr[sj] - 1;
 #ifdef MLX
-    MLX_SENSORS_COPY;
+    // MLX_SENSORS_COPY;
 #endif
     mexType accumX = 0.0, accumY = 0.0,
             accumXX = 0.0, accumYY = 0.0,
@@ -93,24 +93,24 @@ kernel void SensorsKernel(
     accumXY /= ZoneCount;
     accum_p /= ZoneCount;
     // ELD(SensorOutput,index)=accumX*accumX+accumY*accumY+accumZ*accumZ;
-    // #ifdef MLX
-    // if (IS_Vx_SELECTED(SelMapsSensors))
-    //     ELD(SensorOutput, gid + IndexSensor_Vx*NumberSensors) = accumX;
-    // if (IS_Vy_SELECTED(SelMapsSensors))
-    //     ELD(SensorOutput, gid + IndexSensor_Vy*NumberSensors) = accumY;
-    // if (IS_Sigmaxx_SELECTED(SelMapsSensors))
-    //     ELD(SensorOutput, gid + IndexSensor_Sigmaxx*NumberSensors) = accumXX;
-    // if (IS_Sigmayy_SELECTED(SelMapsSensors))
-    //     ELD(SensorOutput, gid + IndexSensor_Sigmayy*NumberSensors) = accumYY;
-    // if (IS_Sigmaxy_SELECTED(SelMapsSensors))
-    //     ELD(SensorOutput, gid + IndexSensor_Sigmaxy*NumberSensors) = accumXY;
-    // if (IS_Pressure_SELECTED(SelMapsSensors))
-    //     ELD(SensorOutput, gid + IndexSensor_Pressure*NumberSensors) = accum_p;
-    // if (IS_Pressure_Gx_SELECTED(SelMapsSensors))
-    //     ELD(SensorOutput, gid + IndexSensor_Pressure_gx*NumberSensors) = accum_p_gx;
-    // if (IS_Pressure_Gy_SELECTED(SelMapsSensors))
-    //     ELD(SensorOutput, gid + IndexSensor_Pressure_gy*NumberSensors) = accum_p_gy;
-    // #else
+    #ifdef MLX
+    if (IS_Vx_SELECTED(SelMapsSensors))
+        ELD(SensorOutput, gid + IndexSensor_Vx*NumberSensors) = accumX;
+    if (IS_Vy_SELECTED(SelMapsSensors))
+        ELD(SensorOutput, gid + IndexSensor_Vy*NumberSensors) = accumY;
+    if (IS_Sigmaxx_SELECTED(SelMapsSensors))
+        ELD(SensorOutput, gid + IndexSensor_Sigmaxx*NumberSensors) = accumXX;
+    if (IS_Sigmayy_SELECTED(SelMapsSensors))
+        ELD(SensorOutput, gid + IndexSensor_Sigmayy*NumberSensors) = accumYY;
+    if (IS_Sigmaxy_SELECTED(SelMapsSensors))
+        ELD(SensorOutput, gid + IndexSensor_Sigmaxy*NumberSensors) = accumXY;
+    if (IS_Pressure_SELECTED(SelMapsSensors))
+        ELD(SensorOutput, gid + IndexSensor_Pressure*NumberSensors) = accum_p;
+    if (IS_Pressure_Gx_SELECTED(SelMapsSensors))
+        ELD(SensorOutput, gid + IndexSensor_Pressure_gx*NumberSensors) = accum_p_gx;
+    if (IS_Pressure_Gy_SELECTED(SelMapsSensors))
+        ELD(SensorOutput, gid + IndexSensor_Pressure_gy*NumberSensors) = accum_p_gy;
+    #else
     if (IS_Vx_SELECTED(SelMapsSensors))
         ELD(SensorOutput, index + subarrsize * IndexSensor_Vx) = accumX;
     if (IS_Vy_SELECTED(SelMapsSensors))
@@ -127,7 +127,7 @@ kernel void SensorsKernel(
         ELD(SensorOutput, index + subarrsize * IndexSensor_Pressure_gx) = accum_p_gx;
     if (IS_Pressure_Gy_SELECTED(SelMapsSensors))
         ELD(SensorOutput, index + subarrsize * IndexSensor_Pressure_gy) = accum_p_gy;
-    // #endif
+    #endif
 
 //----- MLX SENSORS END -----//
 #ifndef MLX
