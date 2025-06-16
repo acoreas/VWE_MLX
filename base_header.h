@@ -681,7 +681,7 @@ if IS_ ## _VarName ## _SELECTED(INHOST(SelMapsRMSPeak)) \
 		if (IS_Vy_SELECTED(SelMapsRMSPeak))																											\
 			ELD(SqrAcc, index_copy1 + index_copy2 * IndexRMSPeak_Vy) = ELD_OLD(SqrAcc, index_copy1 + index_copy2 * IndexRMSPeak_Vy);				\
 	}																																				\
-	// threadgroup_barrier(metal::mem_flags::mem_threadgroup);
+	threadgroup_barrier(metal::mem_flags::mem_threadgroup);
 
 #define MLX_STRESS_COPY 													    \
 	/* Copy the data from the old buffer to the new one */ 						\					
@@ -741,7 +741,7 @@ if IS_ ## _VarName ## _SELECTED(INHOST(SelMapsRMSPeak)) \
 	index_copy1 = Ind_Sigma_xx(i, j); 											\
 	ELD(Rxx, index_copy1) = ELD_OLD(Rxx, index_copy1); 							\
 	ELD(Ryy, index_copy1) = ELD_OLD(Ryy, index_copy1); 							\
-	// threadgroup_barrier(metal::mem_flags::mem_threadgroup);
+	threadgroup_barrier(metal::mem_flags::mem_threadgroup);
 
 #define MLX_PARTICLE_COPY	 													\
 	/* Copy the data from the old buffer to the new one */ 						\					
@@ -777,7 +777,7 @@ if IS_ ## _VarName ## _SELECTED(INHOST(SelMapsRMSPeak)) \
 		EL(Vy, i, j + 1) = EL_OLD(Vy, i, j + 1); 								\
 	} 																			\
 	  																			\
-	// threadgroup_barrier(metal::mem_flags::mem_threadgroup);
+	threadgroup_barrier(metal::mem_flags::mem_threadgroup);
 
 #define MLX_SENSORS_COPY	 																																	\
 	/* Copy the data from the old buffer to the new one */ 																										\					
@@ -808,7 +808,7 @@ if IS_ ## _VarName ## _SELECTED(INHOST(SelMapsRMSPeak)) \
 		if (IS_Pressure_Gy_SELECTED(SelMapsSensors))																											\
 			ELD(SensorOutput, index_copy1 + subarrsize * IndexSensor_Pressure_gy) = ELD_OLD(SensorOutput, index_copy1 + subarrsize * IndexSensor_Pressure_gy);	\
 	}																																							\
-		// threadgroup_barrier(metal::mem_flags::mem_threadgroup);
+		threadgroup_barrier(metal::mem_flags::mem_threadgroup);
 //----- MLX HEADER END -----//
 #endif
 /// PMLS

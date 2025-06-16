@@ -304,8 +304,6 @@ class VWE:
     
         nref=sys.getrefcount(self.mex_buffer[7])
         print('before exec nref',nref)
-        
-        # Comment out line below to run full simulation
         print(f'Number of time steps: {TimeSteps}')
         
         num_sensors = np.prod(self.globalSensor)
@@ -313,11 +311,9 @@ class VWE:
         sub_sampling = arguments['SensorSubSampling']
         subarrsize = num_sensors * (TimeSteps// sub_sampling + 1 - sensor_start)
         sensor_output_buf_size = num_sensors * self._outparams['NumberSelSensorMaps']
-        if self.using_mlx:
-            sensor_output_tmp_buffer = mx.zeros(sensor_output_buf_size,dtype=mx.float32)
         
         if self.using_mlx:
-            n_eval = int(2500e6/sum(arr.size for arr in self.mex_buffer)) # 250e6 array size was found to be a good point for ensuring fast performance
+            n_eval = int(250e6/sum(arr.size for arr in self.mex_buffer)) # 250e6 array size was found to be a good point for ensuring fast performance
             n_eval = max(n_eval,1)
                                 
         for nStep in range(TimeSteps):
@@ -330,7 +326,7 @@ class VWE:
 
             # Print kernel code for last loop
             if nStep == TimeSteps - 1:
-                verbose = False
+                verbose = False #True
             else:
                 verbose = False
             
@@ -354,35 +350,32 @@ class VWE:
                     self.mex_buffer[6], \
                     self.mex_buffer[7], \
                     self.mex_buffer[10] = self.AllStressKernels[i](inputs=[self.constant_buffer_uint,
-                                                                     self.index_mex,
-                                                                     self.index_uint,
-                                                                     self.uint_buffer,
-                                                                    #  self.mex_buffer[0],
-                                                                     self.mex_buffer[1],
-                                                                     self.mex_buffer[2],
-                                                                     self.mex_buffer[3],
-                                                                     self.mex_buffer[4],
-                                                                     self.mex_buffer[5],
-                                                                     self.mex_buffer[6],
-                                                                     self.mex_buffer[7],
-                                                                     self.mex_buffer[8],
-                                                                     self.mex_buffer[9],
-                                                                     self.mex_buffer[10],
-                                                                    #  self.mex_buffer[11]
-                                                                     ],
-                                                             output_shapes=[self.mex_buffer[2].shape,
-                                                                            self.mex_buffer[3].shape,
-                                                                            self.mex_buffer[4].shape,
-                                                                            self.mex_buffer[5].shape,
-                                                                            self.mex_buffer[6].shape,
-                                                                            self.mex_buffer[7].shape,
-                                                                            self.mex_buffer[10].shape],
-                                                             output_dtypes=[self.mex_buffer[0].dtype]*7,
-                                                             grid=(nSize,1,1),
-                                                             threadgroup=(256, 1, 1),
-                                                             verbose=verbose,
-                                                             init_value=init_value_tmp,
-                                                             stream=self.ctx)
+                                                                           self.index_mex,
+                                                                           self.index_uint,
+                                                                           self.uint_buffer,
+                                                                           self.mex_buffer[1],
+                                                                           self.mex_buffer[2],
+                                                                           self.mex_buffer[3],
+                                                                           self.mex_buffer[4],
+                                                                           self.mex_buffer[5],
+                                                                           self.mex_buffer[6],
+                                                                           self.mex_buffer[7],
+                                                                           self.mex_buffer[8],
+                                                                           self.mex_buffer[9],
+                                                                           self.mex_buffer[10]],
+                                                                   output_shapes=[self.mex_buffer[2].shape,
+                                                                                  self.mex_buffer[3].shape,
+                                                                                  self.mex_buffer[4].shape,
+                                                                                  self.mex_buffer[5].shape,
+                                                                                  self.mex_buffer[6].shape,
+                                                                                  self.mex_buffer[7].shape,
+                                                                                  self.mex_buffer[10].shape],
+                                                                   output_dtypes=[self.mex_buffer[0].dtype]*7,
+                                                                   grid=(nSize,1,1),
+                                                                   threadgroup=(256, 1, 1),
+                                                                   verbose=verbose,
+                                                                   init_value=init_value_tmp,
+                                                                   stream=self.ctx)
                 
                 for i in ["MAIN_1"]:
                     nSize=np.prod(DimsKernel[i])
@@ -391,76 +384,52 @@ class VWE:
                     self.mex_buffer[0], \
                     self.mex_buffer[1], \
                     self.mex_buffer[10] = self.AllParticleKernels[i](inputs=[self.constant_buffer_uint,
-                                                                          self.index_mex,
-                                                                          self.index_uint,
-                                                                          self.uint_buffer,
-                                                                          self.mex_buffer[0],
-                                                                          self.mex_buffer[1],
-                                                                        #   self.mex_buffer[2],
-                                                                        #   self.mex_buffer[3],
-                                                                        #   self.mex_buffer[4],
-                                                                        #   self.mex_buffer[5],
-                                                                          self.mex_buffer[6],
-                                                                          self.mex_buffer[7],
-                                                                          self.mex_buffer[8],
-                                                                          self.mex_buffer[9],
-                                                                          self.mex_buffer[10],
-                                                                        #   self.mex_buffer[11]
-                                                                          ],
-                                                                output_shapes=[self.mex_buffer[0].shape,
-                                                                               self.mex_buffer[1].shape,
-                                                                               self.mex_buffer[10].shape],
-                                                                output_dtypes=[self.mex_buffer[0].dtype]*3,
-                                                                grid=(nSize,1,1),
-                                                                threadgroup=(256, 1, 1),
-                                                                verbose=verbose,
-                                                                init_value=init_value_tmp,
-                                                                stream=self.ctx)
+                                                                             self.index_mex,
+                                                                             self.index_uint,
+                                                                             self.uint_buffer,
+                                                                             self.mex_buffer[0],
+                                                                             self.mex_buffer[1],
+                                                                             self.mex_buffer[6],
+                                                                             self.mex_buffer[7],
+                                                                             self.mex_buffer[8],
+                                                                             self.mex_buffer[9],
+                                                                             self.mex_buffer[10]],
+                                                                     output_shapes=[self.mex_buffer[0].shape,
+                                                                                    self.mex_buffer[1].shape,
+                                                                                    self.mex_buffer[10].shape],
+                                                                     output_dtypes=[self.mex_buffer[0].dtype]*3,
+                                                                     grid=(nSize,1,1),
+                                                                     threadgroup=(256, 1, 1),
+                                                                     verbose=verbose,
+                                                                     init_value=init_value_tmp,
+                                                                     stream=self.ctx)
 
                 if (nStep % arguments['SensorSubSampling'])==0  and (int(nStep/arguments['SensorSubSampling'])>=arguments['SensorStart']):
                     
                     # Run sensors kernel
-                    # start_index = int(((nStep // sub_sampling - sensor_start) * sensor_output_buf_size))
-                    # end_index = int(start_index+sensor_output_buf_size)
-                    # print(f"Saving into SensorOutput[{start_index}:{end_index}]")
-                    # self.mex_buffer[11] \
-                    # self.mex_buffer[11][start_index:end_index] \
-                    sensor_output_tmp_buffer \
-                    = self.SensorsKernel(inputs=[self.constant_buffer_uint,
-                                                                       self.index_mex,
-                                                                       self.index_uint,
-                                                                       self.uint_buffer,
-                                                                    #    self.mex_buffer[0],
-                                                                       self.mex_buffer[1],
-                                                                    #    self.mex_buffer[2],
-                                                                    #    self.mex_buffer[3],
-                                                                    #    self.mex_buffer[4],
-                                                                    #    self.mex_buffer[5],
-                                                                       self.mex_buffer[6],
-                                                                       self.mex_buffer[7],
-                                                                    #    self.mex_buffer[8],
-                                                                    #    self.mex_buffer[9],
-                                                                    #    self.mex_buffer[10],
-                                                                    #    self.mex_buffer[11]
-                                                                       ],
-                                                                    #    sensor_output_tmp_buffer],
-                                                        output_shapes=[sensor_output_tmp_buffer.shape],
-                                                        # output_shapes=[self.mex_buffer[11].shape],
-                                                        output_dtypes=[self.mex_buffer[11].dtype],
-                                                        grid=(np.prod(self.globalSensor),1,1),
-                                                        threadgroup=(256, 1, 1),
-                                                        verbose=verbose,
-                                                        init_value=init_value_tmp,
-                                                        stream=self.ctx)[0]
+                    sensor_output_tmp_buffer = self.SensorsKernel(inputs=[self.constant_buffer_uint,
+                                                                          self.index_mex,
+                                                                          self.index_uint,
+                                                                          self.uint_buffer,
+                                                                          self.mex_buffer[1],
+                                                                          self.mex_buffer[6],
+                                                                          self.mex_buffer[7]],
+                                                                  output_shapes=[(sensor_output_buf_size,)],
+                                                                  output_dtypes=[self.mex_buffer[11].dtype],
+                                                                  grid=(np.prod(self.globalSensor),1,1),
+                                                                  threadgroup=(128, 1, 1),
+                                                                  verbose=verbose,
+                                                                  init_value=init_value_tmp,
+                                                                  stream=self.ctx)[0]
                 
-                for map in ['Vx','Vy','Sigmaxx','Sigmayy','Sigmaxy','Pressure','Pressure_gx','Pressure_gy']:
-                    if arguments['SelMapsSensors'] & self.MASKID[map]:
-                        time_start_idx = ((nStep // sub_sampling - sensor_start) * num_sensors)
-                        host_start_idx = int(time_start_idx + subarrsize * outparams['IndexSensor_'+map])
-                        host_end_idx = int(host_start_idx + num_sensors)
-                        device_start_idx = int(num_sensors * outparams['IndexSensor_'+map])
-                        device_end_idx = int(device_start_idx + num_sensors)
-                        self.mex_buffer[11][host_start_idx:host_end_idx] = sensor_output_tmp_buffer[device_start_idx:device_end_idx] 
+                    for map in ['Vx','Vy','Sigmaxx','Sigmayy','Sigmaxy','Pressure','Pressure_gx','Pressure_gy']:
+                        if arguments['SelMapsSensors'] & self.MASKID[map]:
+                            time_start_idx = ((nStep // sub_sampling - sensor_start) * num_sensors)
+                            host_start_idx = int(time_start_idx + subarrsize * outparams['IndexSensor_'+map])
+                            host_end_idx = int(host_start_idx + num_sensors)
+                            device_start_idx = int(num_sensors * outparams['IndexSensor_'+map])
+                            device_end_idx = int(device_start_idx + num_sensors)
+                            self.mex_buffer[11][host_start_idx:host_end_idx] = sensor_output_tmp_buffer[device_start_idx:device_end_idx]
                     
                 if nStep % n_eval == 0:
                     print(f"Working on time step {nStep}")
@@ -571,11 +540,7 @@ class VWE:
             Shape = ArrayResCPU[i].shape
             print('getting ',i,self._IndexDataMetal[i])
             Buffer=np.frombuffer(self.mex_buffer[self._IndexDataMetal[i]],dtype=np.float32)[int(self.HOST_INDEX_MEX[self.C_IND[i]][0]):int(self.HOST_INDEX_MEX[self.C_IND[i]][0]+SizeCopy)]
-            # if self.using_mlx:
-            #     Buffer = np.frombuffer(self.mex_buffer[self._IndexDataMetal[i]],dtype=np.float32)[int(self.HOST_INDEX_MEX[self.C_IND[i]][0]):int(self.HOST_INDEX_MEX[self.C_IND[i]][0]+SizeCopy)]
-            # else:
-            #     Buffer=np.frombuffer(self.mex_buffer[self._IndexDataMetal[i]],dtype=np.float32)[int(self.HOST_INDEX_MEX[self.C_IND[i]][0]):int(self.HOST_INDEX_MEX[self.C_IND[i]][0]+SizeCopy)]
-            ArrayResCPU[i][:,:,:] = Buffer.reshape(Shape,order='F').copy()
+            ArrayResCPU[i][:,:,:] = Buffer.reshape(Shape,order='F')
      
         
         SizeBuffer = {1:0, 6:0, 7:0, 9:0}
@@ -619,6 +584,9 @@ class VWE:
             # print('mex nref',nref)
             del handle
         
+        if self.using_mlx:
+            mx.synchronize(self.ctx)
+            
         # Format and return kernel results
         self._format_results(ArrayResCPU)
         
@@ -655,7 +623,7 @@ class VWE:
             raise SystemError("GPU not available")
         
         self.device = gpu_device_name
-        self.ctx = dev
+        self.ctx = mx.default_stream(dev)
 
     def _get_VWE_kernels_MC(self,kernel_code):
         """ Assembles stress, particle and sensor kernels using metalcompute library"""

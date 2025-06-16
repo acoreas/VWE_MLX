@@ -137,7 +137,7 @@ dependencies:
       - mkdocs-material==8.5.11
       - mkdocs-material-extensions==1.1.1
       - mkdocs-windmill==1.0.5
-      - mlx==0.22.0
+      - mlx
       - multidict==6.0.2
       - nbclient==0.10.2
       - nbconvert==7.16.6

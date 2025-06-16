@@ -32,7 +32,10 @@ particle_kernel = ""
 sensors_kernel = ""
             
 def main():
-    #%% PARAMETERS
+    # ---------------------------------------------------------------------------
+    #                                 PARAMETERS
+    # ---------------------------------------------------------------------------
+    
     # Device Specific
     gpu_device = 'M1'               # GPU device name
 
@@ -47,12 +50,13 @@ def main():
     tx_plane_loc = 0.01             # m - in XY plane at Z = 0.01 m
     us_amplitude = 100e3            # Pa
     us_frequency = 350e3            # Hz
-    x_dim = 0.05                    # m
-    y_dim = 0.10                    # m
+    x_dim = 0.2                     # m
+    y_dim = 0.4                     # m
 
-
-
-    #%% SIMULATION DOMAIN SETUP
+    # ---------------------------------------------------------------------------
+    #                          SIMULATION DOMAIN SETUP 
+    # ---------------------------------------------------------------------------
+    
     # Domain Properties
     shortest_wavelength = medium_SOS/us_frequency
     spatial_step = shortest_wavelength/ points_per_wavelength
@@ -82,9 +86,10 @@ def main():
     StaggeredConstants['ColLongAtt']=3
     StaggeredConstants['ColShearAtt']=4
     
+    # ---------------------------------------------------------------------------
+    #                GENERATE SOURCE MAP + SOURCE TIME SIGNAL 
+    # ---------------------------------------------------------------------------
     
-    
-    #%% GENERATE SOURCE MAP + SOURCE TIME SIGNAL
     # Generate line source
     def MakeLineSource(DimX,SpatialStep,Diameter):
         # simple defintion of a circular source centred in the domain
@@ -122,9 +127,10 @@ def main():
     pulse_source=np.reshape(pulse_source,(1,len(source_time_vector))) 
     print("Number of time points in source signal:",len(source_time_vector))
     
+    # ---------------------------------------------------------------------------
+    #                           GENERATE SENSOR MAP
+    # ---------------------------------------------------------------------------
     
-    
-    #%% GENERATE SENSOR MAP
     # Define sensor map
     sensor_map=np.zeros((N1,N2),np.uint32)
     sensor_map[pml_thickness:-pml_thickness,pml_thickness:-pml_thickness]=1
@@ -134,9 +140,10 @@ def main():
     # plt.imshow(sensor_map.T,cmap=plt.cm.gray)
     # plt.title('Sensor map location')   
     
+    # ---------------------------------------------------------------------------
+    #                VISCOELASTICE WAVE EQUATION KERNEL CODES
+    # ---------------------------------------------------------------------------
     
-    
-    #%% VISCOELASTICE WAVE EQUATION KERNEL CODES
     global base_header,stress_kernel,particle_kernel,sensors_kernel
     with open('base_header.h','r') as f:
         base_header = f.read()
@@ -150,8 +157,10 @@ def main():
     with open('sensors_kernel.c','r') as f:
         sensors_kernel = f.read()
         
-        
-    #%% VISCOELEASTIC WAVE EQUATION PRE KERNEL CALCULATIONS  
+    # ---------------------------------------------------------------------------
+    #          VISCOELEASTIC WAVE EQUATION PRE KERNEL CALCULATIONS  
+    # ---------------------------------------------------------------------------
+    
     vwe_mc = VWE()
     vwe_mlx = VWE()
 
@@ -172,7 +181,7 @@ def main():
                                                 USE_SINGLE=True,
                                                 DT=dt,
                                                 QfactorCorrection=True,
-                                                SelRMSorPeak=3, #we select  only RMS data
+                                                SelRMSorPeak=3, #we collect both RMS and peak data
                                                 SelMapsRMSPeakList=['Vx','Vy','Pressure','Sigmaxx','Sigmayy','Sigmaxy'],
                                                 SelMapsSensorsList=['Vx','Vy','Pressure','Sigmaxx','Sigmayy','Sigmaxy'],
                                                 SensorSubSampling=sensor_steps,
@@ -181,9 +190,10 @@ def main():
     input_params_mlx = input_params_mc.copy()
     post_kernel_args_mlx = post_kernel_args_mc.copy()
     
+    # ---------------------------------------------------------------------------
+    #                      RUN VWE CALCULATION VIA MLX
+    # ---------------------------------------------------------------------------
     
-    
-    #%% RUN VWE CALCULATION VIA MLX
     # Kernel setup
     output_dict_mlx = vwe_mlx.kernel_setup(arguments=input_params_mlx,using_mlx=True)
     
@@ -193,9 +203,10 @@ def main():
     # Post kernel processing
     sensor_results_mlx,last_map_results_mlx,rms_results_mlx,peak_results_mlx,InputParam_mlx = vwe_utils.VWE_post_kernel_processing(results_mlx,input_params_mlx,post_kernel_args_mlx)
     
+    # ---------------------------------------------------------------------------
+    #                  RUN VWE CALCULATION VIA METALCOMPUTE
+    # ---------------------------------------------------------------------------
     
-    
-    #%% RUN VWE CALCULATION VIA METALCOMPUTE
     # Kernel setup
     output_dict_mc = vwe_mc.kernel_setup(arguments=input_params_mc,using_mlx=False)
 
@@ -205,8 +216,12 @@ def main():
     # Post kernel processing
     sensor_results_mc,last_map_results_mc,rms_results_mc,peak_results_mc,InputParam_mc = vwe_utils.VWE_post_kernel_processing(results_mc,input_params_mc,post_kernel_args_mc)
     
-    # %% PLOT Function
-    def plot_results(moi=None):
+    # ---------------------------------------------------------------------------
+    #                            PLOT FUNCTION
+    # ---------------------------------------------------------------------------
+    
+    def save_plot_results(moi=None,title="",show_plot=True,print_sim_scores=True):
+        print(f"Saving plots for {moi}")
         if moi == "last_map":
             output_vars = ['Vx','Vy','Pressure','Sigma_xx','Sigma_yy','Sigma_xy']
         else:
@@ -214,7 +229,7 @@ def main():
         num_vars = len(output_vars)
 
         fig, axes = plt.subplots(nrows=num_vars, ncols=3, figsize=(16, 6*num_vars))
-        fig.suptitle(f"Output Maps for {moi} (MC vs MLX)",fontsize=18)
+        fig.suptitle(f"{title}\nOutput Maps for {moi} (MC vs MLX)",fontsize=18)
 
         # Iterate through rows
         images = []
@@ -273,23 +288,80 @@ def main():
             mse = mean_squared_error(results_mc,results_mlx)
             nrmse = normalized_root_mse(results_mc,results_mlx,normalization='min-max')
             
-            print(output_key)
-            print(f"DICE Score: {dice_score}")
-            print(f"Mean square error: {mse}")
-            print(f"Normalized root mean square error: {nrmse}\n")
+            if print_sim_scores:
+                print(output_key)
+                print(f"DICE Score: {dice_score}")
+                print(f"Mean square error: {mse}")
+                print(f"Normalized root mean square error: {nrmse}\n")
             
         # Make room for the suptitle by shrinking the layout area
         plt.tight_layout(rect=[0.1,0,1,0.98])
+        
+        # Show plot
+        if show_plot:
+            plt.show()
+            
+        # Save plot
+        plt.savefig("plot_results" + os.sep + f"python script - {title} - {moi}")
+    
+    # ---------------------------------------------------------------------------
+    #                      PLOT MAPS FOR BOTH MC AND MLX
+    # ---------------------------------------------------------------------------
     
     # Select map of interest    
-    plot_results(moi="last_map")
-    plot_results(moi="rms_results")
-    plot_results(moi="peak_results")
-    plot_results(moi="sensor_results")
+    save_plot_results(moi="last_map",title="First Run",show_plot=False,print_sim_scores=False)
+    save_plot_results(moi="rms_results",title="First Run",show_plot=False,print_sim_scores=False)
+    save_plot_results(moi="peak_results",title="First Run",show_plot=False,print_sim_scores=False)
+    save_plot_results(moi="sensor_results",title="First Run",show_plot=False,print_sim_scores=False)
     
-    
-    # Show plots
-    plt.show()
+    # ---------------------------------------------------------------------------
+    #                 RERUN EVERYTHING WITH DIFFERENT TYPESOURCE
+    # ---------------------------------------------------------------------------
 
+    input_params_mc, post_kernel_args_mc = vwe_utils.VWE_preparation(MaterialMap=material_map,
+                                            MaterialProperties=material_list,
+                                            Frequency=us_frequency,
+                                            SourceMap=source_map,
+                                            SourceFunctions=pulse_source,
+                                            SpatialStep=spatial_step,
+                                            DurationSimulation=sim_time,
+                                            SensorMap=sensor_map,
+                                            Ox=Ox*amp_displacement,
+                                            Oy=Oy*amp_displacement,
+                                            NDelta=pml_thickness,
+                                            ReflectionLimit=reflection_limit,
+                                            COMPUTING_BACKEND='METAL',
+                                            USE_SINGLE=True,
+                                            DT=dt,
+                                            QfactorCorrection=True,
+                                            SelRMSorPeak=1, # we collect only srms
+                                            SelMapsRMSPeakList=['Vx','Vy','Pressure','Sigmaxx','Sigmayy','Sigmaxy'],
+                                            SelMapsSensorsList=['Vx','Vy','Pressure','Sigmaxx','Sigmayy','Sigmaxy'],
+                                            SensorSubSampling=sensor_steps,
+                                            DefaultGPUDeviceName=gpu_device,
+                                            TypeSource=2) # previous was 0
+
+    input_params_mlx = input_params_mc.copy()
+    post_kernel_args_mlx = post_kernel_args_mc.copy()
+
+    # Kernel setup
+    output_dict_mlx = vwe_mlx.kernel_setup(arguments=input_params_mlx,using_mlx=True)
+    # Kernel execution
+    results_mlx = vwe_mlx.kernel_execution(input_params_mlx,output_dict_mlx)
+    # Post kernel processing
+    sensor_results_mlx,last_map_results_mlx,rms_results_mlx,InputParam_mlx = vwe_utils.VWE_post_kernel_processing(results_mlx,input_params_mlx,post_kernel_args_mlx)
+
+    # Kernel setup
+    output_dict_mc = vwe_mc.kernel_setup(arguments=input_params_mc,using_mlx=False)
+    # Kernel execution
+    results_mc = vwe_mc.kernel_execution(input_params_mc,output_dict_mc)
+    # Post kernel processing
+    sensor_results_mc,last_map_results_mc,rms_results_mc,InputParam_mc = vwe_utils.VWE_post_kernel_processing(results_mc,input_params_mc,post_kernel_args_mc)
+
+    # Plot results
+    save_plot_results("last_map",title="Second Run",show_plot=False,print_sim_scores=False)
+    save_plot_results("rms_results",title="Second Run",show_plot=False,print_sim_scores=False)
+    save_plot_results("sensor_results",title="Second Run",show_plot=False,print_sim_scores=False)
+    
 if __name__ == "__main__":
     main()
