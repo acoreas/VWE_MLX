@@ -28,15 +28,15 @@ kernel void SensorsKernel(
 
     if (sj >= (_PT)NumberSensors)
         return;
-
+#ifndef MLX
     _PT index = (((_PT)nStep) / ((_PT)SensorSubSampling) - ((_PT)SensorStart)) * ((_PT)NumberSensors) + (_PT)sj;
-    _PT i, j;
-    _PT index2, index3,
-        subarrsize = (((_PT)NumberSensors) * (((_PT)TimeSteps) / ((_PT)SensorSubSampling) + 1 - ((_PT)SensorStart)));
-    index2 = IndexSensorMap_pr[sj] - 1;
-#ifdef MLX
-    // MLX_SENSORS_COPY;
+    _PT subarrsize = (((_PT)NumberSensors) * (((_PT)TimeSteps) / ((_PT)SensorSubSampling) + 1 - ((_PT)SensorStart)));
 #endif
+    _PT i, j;
+    _PT index2, index3;
+    
+    index2 = IndexSensorMap_pr[sj] - 1;
+
     mexType accumX = 0.0, accumY = 0.0,
             accumXX = 0.0, accumYY = 0.0,
             accumXY = 0.0, accum_p = 0, accum_p_gx = 0, accum_p_gy = 0;

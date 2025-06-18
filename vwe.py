@@ -254,7 +254,7 @@ class VWE:
         
         # Set up kernel functions
         if self.using_mlx:
-            self._get_VWE_kernels_MLX(AllC)
+            self._get_VWE_kernels_MLX(AllC,arguments)
         else:
             self._get_VWE_kernels_MC(AllC)
         
@@ -277,7 +277,7 @@ class VWE:
         for k in ['Vx','Vy','Sigma_xx','Sigma_yy','Sigma_xy','Pressure','Snapshots']:
             self._allocate_host_memory(k,ArrayResCPU,td,ArrayResCPU[k].size*outparams['ZoneCount'])
         for k in ['SqrAcc','SensorOutput']:
-            self._allocate_host_memory(k,ArrayResCPU)
+            self._allocate_host_memory(k,ArrayResCPU,num_sensors=NumberSensors,num_sensor_maps=NumberSelSensorMaps)
 
         # Create and assign values to kernel buffers
         self._pre_kernel_execution(arguments, outparams)
@@ -338,7 +338,6 @@ class VWE:
             # print(f"Kernel Size: {np.prod(DimsKernel['MAIN_1'])}")
 
             if self.using_mlx:
-                
                 for i in ["MAIN_1"]:
                     nSize=np.prod(DimsKernel[i])
                     
@@ -417,24 +416,24 @@ class VWE:
                                                                   output_shapes=[(sensor_output_buf_size,)],
                                                                   output_dtypes=[self.mex_buffer[11].dtype],
                                                                   grid=(np.prod(self.globalSensor),1,1),
-                                                                  threadgroup=(128, 1, 1),
+                                                                  threadgroup=(256, 1, 1),
                                                                   verbose=verbose,
                                                                   init_value=init_value_tmp,
                                                                   stream=self.ctx)[0]
-                
+
+                    Buffer=np.array(sensor_output_tmp_buffer,dtype=np.float32,order='F')
                     for map in ['Vx','Vy','Sigmaxx','Sigmayy','Sigmaxy','Pressure','Pressure_gx','Pressure_gy']:
                         if arguments['SelMapsSensors'] & self.MASKID[map]:
-                            time_start_idx = ((nStep // sub_sampling - sensor_start) * num_sensors)
-                            host_start_idx = int(time_start_idx + subarrsize * outparams['IndexSensor_'+map])
-                            host_end_idx = int(host_start_idx + num_sensors)
+                            time_start_idx = int((nStep // sub_sampling - sensor_start))
                             device_start_idx = int(num_sensors * outparams['IndexSensor_'+map])
                             device_end_idx = int(device_start_idx + num_sensors)
-                            self.mex_buffer[11][host_start_idx:host_end_idx] = sensor_output_tmp_buffer[device_start_idx:device_end_idx]
+                            
+                            
+                            ArrayResCPU['SensorOutput'][:,time_start_idx,outparams['IndexSensor_'+map]] = Buffer[device_start_idx:device_end_idx]
                     
                 if nStep % n_eval == 0:
                     print(f"Working on time step {nStep}")
-                    mx.eval(
-                            self.mex_buffer[0],
+                    mx.eval([self.mex_buffer[0],
                             self.mex_buffer[1],
                             self.mex_buffer[2],
                             self.mex_buffer[3],
@@ -445,8 +444,7 @@ class VWE:
                             self.mex_buffer[8],
                             self.mex_buffer[9],
                             self.mex_buffer[10],
-                            self.mex_buffer[11]
-                            )
+                            self.mex_buffer[11]])
             else:
                 
                 self.ctx.init_command_buffer()
@@ -533,14 +531,19 @@ class VWE:
                                         self.mex_buffer[9],
                                         self.mex_buffer[10],
                                         self.mex_buffer[11]))
+        else:
+            mx.synchronize()
         
         # Determine expected size of output, then retrieve and reshape from buffer
         for i in ['SqrAcc', 'SensorOutput']:
             SizeCopy = ArrayResCPU[i].size
             Shape = ArrayResCPU[i].shape
             print('getting ',i,self._IndexDataMetal[i])
-            Buffer=np.frombuffer(self.mex_buffer[self._IndexDataMetal[i]],dtype=np.float32)[int(self.HOST_INDEX_MEX[self.C_IND[i]][0]):int(self.HOST_INDEX_MEX[self.C_IND[i]][0]+SizeCopy)]
-            ArrayResCPU[i][:,:,:] = Buffer.reshape(Shape,order='F')
+            if self.using_mlx and i == 'SensorOutput':
+                pass
+            else:
+                Buffer=np.frombuffer(self.mex_buffer[self._IndexDataMetal[i]],dtype=np.float32)[int(self.HOST_INDEX_MEX[self.C_IND[i]][0]):int(self.HOST_INDEX_MEX[self.C_IND[i]][0]+SizeCopy)]
+                ArrayResCPU[i][:,:,:] = Buffer.reshape(Shape,order='F')
      
         
         SizeBuffer = {1:0, 6:0, 7:0, 9:0}
@@ -583,9 +586,6 @@ class VWE:
             # nref=sys.getrefcount(handle)
             # print('mex nref',nref)
             del handle
-        
-        if self.using_mlx:
-            mx.synchronize(self.ctx)
             
         # Format and return kernel results
         self._format_results(ArrayResCPU)
@@ -622,7 +622,7 @@ class VWE:
         except:
             raise SystemError("GPU not available")
         
-        self.device = gpu_device_name
+        self.device = dev
         self.ctx = mx.default_stream(dev)
 
     def _get_VWE_kernels_MC(self,kernel_code):
@@ -643,7 +643,7 @@ class VWE:
 
         self.SensorsKernel=prg.function('SensorsKernel')
 
-    def _get_VWE_kernels_MLX(self,kernel_code):
+    def _get_VWE_kernels_MLX(self,kernel_code,args):
         """ Assembles stress, particle and sensor kernels using mlx's fast.metal_kernel """
         
         PartsStress=['MAIN_1']
@@ -764,8 +764,19 @@ class VWE:
                                 # 'p_MEX_BUFFER_10_NOT_USED',
                                 'p_MEX_BUFFER_11']
         
+        unique_id = ""
+        for key,value in args.items():
+            if isinstance(value, np.ndarray):
+                if value.size <= 1:
+                    unique_id += f"_{key}_{value}"
+            elif isinstance(value, str):
+                unique_id += f"_{key}_{value}"
+            else:
+                pass
+        unique_id = re.sub(r'[^a-zA-Z0-9_]', '', unique_id)
+        
         for k in PartsStress:
-            self.AllStressKernels[k] = mx.fast.metal_kernel(name = k+"_StressKernel",
+            self.AllStressKernels[k] = mx.fast.metal_kernel(name = k+f"_StressKernel{unique_id}",
                                                             input_names = stress_input_names,
                                                             output_names = stress_output_names,
                                                             atomic_outputs = False,
@@ -774,7 +785,7 @@ class VWE:
                                                             ensure_row_contiguous=False)
 
         for k in PartsParticle:
-            self.AllParticleKernels[k] = mx.fast.metal_kernel(name = k+"_ParticleKernel",
+            self.AllParticleKernels[k] = mx.fast.metal_kernel(name = k+f"_ParticleKernel{unique_id}",
                                                               input_names = particle_input_names,
                                                               output_names = particle_output_names,
                                                               atomic_outputs = False,
@@ -782,7 +793,7 @@ class VWE:
                                                               source = mlx_particle_code,
                                                               ensure_row_contiguous=False)
     
-        self.SensorsKernel = mx.fast.metal_kernel(name = 'SensorsKernel',
+        self.SensorsKernel = mx.fast.metal_kernel(name = f'SensorsKernel{unique_id}',
                                                   input_names = sensors_input_names,
                                                   output_names = sensors_output_names,
                                                   atomic_outputs = False,
@@ -880,7 +891,7 @@ class VWE:
         if self.using_mlx:
                 SCode.append("//----- MLX HEADER END -----//\n")
     
-    def _allocate_host_memory(self,Name,ArrayResCPU,td=None,dims=None):
+    def _allocate_host_memory(self,Name,ArrayResCPU,td=None,dims=None,num_sensors=None,num_sensor_maps=None):
         if dims is None:
             dims = ArrayResCPU[Name].size
 
@@ -905,7 +916,10 @@ class VWE:
         if td == "float":
             self.HOST_INDEX_MEX[self.C_IND[Name]][0] = np.uint64(self._c_mex_type[self._IndexDataMetal[Name]])
             self.HOST_INDEX_MEX[self.C_IND[Name]][1] = np.uint64(dims)
-            self._c_mex_type[self._IndexDataMetal[Name]] += dims
+            if Name == 'SensorOutput' and self.using_mlx:
+                self._c_mex_type[self._IndexDataMetal[Name]] += num_sensors * num_sensor_maps
+            else:
+                self._c_mex_type[self._IndexDataMetal[Name]] += dims
         elif td == "unsigned int":
             self.HOST_INDEX_UINT[self.C_IND[Name]][0] = np.uint64(self._c_uint_type)
             self.HOST_INDEX_UINT[self.C_IND[Name]][1] = np.uint64(dims)

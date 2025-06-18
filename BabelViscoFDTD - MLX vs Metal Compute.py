@@ -339,7 +339,8 @@ def main():
                                             SelMapsSensorsList=['Vx','Vy','Pressure','Sigmaxx','Sigmayy','Sigmaxy'],
                                             SensorSubSampling=sensor_steps,
                                             DefaultGPUDeviceName=gpu_device,
-                                            TypeSource=2) # previous was 0
+                                            TypeSource=2,
+                                            SensorStart=0) # previous was 0
 
     input_params_mlx = input_params_mc.copy()
     post_kernel_args_mlx = post_kernel_args_mc.copy()
